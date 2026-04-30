@@ -1,0 +1,213 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Plan #{{ plan.id_plan_tratamiento }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Plan de tratamiento{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Plan de tratamiento #{{ plan.id_plan_tratamiento }}</h1>
+    <p class="page-subtitle">{{ plan.id_ficha_clinica.id_paciente.nombre_completo }} · {{ plan.fecha_creacion|date:"d/m/Y" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'presupuestos:emitir' plan.id_plan_tratamiento %}" class="btn btn-primary">
+      <i class="bi bi-receipt"></i> Emitir presupuesto
+    </a>
+    <a href="{% url 'tratamientos:planes' %}" class="btn btn-outline">
+      <i class="bi bi-arrow-left"></i> Volver
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+
+  <!-- Ítems del plan -->
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-list-check me-2"></i>Ítems del plan</h2>
+        <span style="font-size:12px;color:var(--color-texto-suave);">{{ plan.detalles.count }} ítem{{ plan.detalles.count|pluralize }}</span>
+      </div>
+      <div class="table-wrapper" style="border:none;border-radius:0;">
+        <table class="alba-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Tratamiento</th>
+              <th>Pieza</th>
+              <th>Cant.</th>
+              <th>Valor unit.</th>
+              <th>Subtotal</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for det in plan.detalles.all %}
+            <tr>
+              <td style="color:var(--color-texto-muy-suave);">{{ forloop.counter }}</td>
+              <td>
+                <div style="font-weight:600;">{{ det.id_tratamiento.nombre }}</div>
+                <div style="font-size:11px;color:var(--color-texto-muy-suave);font-family:monospace;">{{ det.id_tratamiento.codigo }}</div>
+              </td>
+              <td>
+                {% if det.codigo_pieza_dental %}
+                <span style="background:var(--color-celeste);color:#0369a1;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;">
+                  🦷 {{ det.codigo_pieza_dental_id }}
+                </span>
+                {% else %}
+                <span style="color:var(--color-texto-muy-suave);font-size:12px;">General</span>
+                {% endif %}
+              </td>
+              <td style="text-align:center;font-weight:600;">{{ det.cantidad }}</td>
+              <td>{{ det.valor_unitario|pesos_cl }}</td>
+              <td style="font-weight:700;">{{ det.subtotal|pesos_cl }}</td>
+              <td>
+                <span class="badge-estado {{ det.estado_detalle }}">{{ det.estado_detalle }}</span>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7">
+                <div class="empty-state" style="padding:24px;">
+                  <div class="empty-state-icon">📋</div>
+                  <div class="empty-state-title">Sin ítems en el plan</div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          {% if plan.detalles.count %}
+          <tfoot>
+            <tr style="background:var(--color-acento-light);">
+              <td colspan="5" style="text-align:right;font-weight:700;padding:12px 14px;">Total estimado del plan</td>
+              <td style="font-weight:800;font-size:15px;color:var(--color-acento);padding:12px 14px;" colspan="2">
+                {{ plan.total_estimado|pesos_cl }}
+              </td>
+            </tr>
+          </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+
+    {% if plan.observaciones %}
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-journal-text me-2"></i>Observaciones</h2></div>
+      <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ plan.observaciones }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Sidebar -->
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-person me-2"></i>Información</h2></div>
+      <div class="card-body">
+        <div style="font-size:12px;text-transform:uppercase;font-weight:700;color:var(--color-texto-muy-suave);margin-bottom:4px;">Paciente</div>
+        <a href="{% url 'pacientes:detalle' plan.id_ficha_clinica.id_paciente_id %}"
+           style="font-weight:700;color:var(--color-acento);text-decoration:none;font-size:14px;">
+          {{ plan.id_ficha_clinica.id_paciente.nombre_completo }}
+        </a>
+        <div style="font-size:12px;color:var(--color-texto-suave);margin-top:2px;">
+          {{ plan.id_ficha_clinica.id_paciente.rut|rut_format }}
+        </div>
+
+        <hr style="border-color:var(--color-borde);margin:12px 0;">
+        <div style="font-size:12px;text-transform:uppercase;font-weight:700;color:var(--color-texto-muy-suave);margin-bottom:4px;">Odontólogo</div>
+        <div style="font-weight:600;font-size:13px;">Dr(a). {{ plan.id_odontologo.nombre_completo }}</div>
+
+        <hr style="border-color:var(--color-borde);margin:12px 0;">
+        <div style="font-size:12px;text-transform:uppercase;font-weight:700;color:var(--color-texto-muy-suave);margin-bottom:4px;">Estado del plan</div>
+        <div class="d-flex justify-content-between align-items-center">
+          <span class="badge-estado {{ plan.estado_plan }}">{{ plan.estado_plan }}</span>
+          {% if plan.estado_plan != 'anulado' and request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}
+          <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnularPlan">
+            <i class="bi bi-x-circle"></i> Anular
+          </button>
+          {% endif %}
+        </div>
+        {% if plan.estado_plan == 'anulado' %}
+        <div class="mt-2" style="background:#fee2e2;padding:10px;border-radius:var(--radius);font-size:12px;">
+          <strong style="color:#991b1b;"><i class="bi bi-info-circle"></i> Motivo de anulación:</strong><br>
+          <span style="color:#7f1d1d;">{{ plan.motivo_anulacion }}</span><br>
+          <span style="color:#991b1b;font-size:10px;">Por: {{ plan.id_usuario_anula.nombre_completo }} el {{ plan.fecha_anulacion|date:"d/m/Y H:i" }}</span>
+        </div>
+        {% endif %}
+
+        <hr style="border-color:var(--color-borde);margin:12px 0;">
+        <div style="font-size:12px;text-transform:uppercase;font-weight:700;color:var(--color-texto-muy-suave);margin-bottom:4px;">Fechas</div>
+        <div style="font-size:13px;">Creación: {{ plan.fecha_creacion|date:"d/m/Y" }}</div>
+        {% if plan.fecha_inicio_estimado %}
+        <div style="font-size:13px;">Inicio: {{ plan.fecha_inicio_estimado|date:"d/m/Y" }}</div>
+        {% endif %}
+        {% if plan.fecha_fin_estimado %}
+        <div style="font-size:13px;">Término: {{ plan.fecha_fin_estimado|date:"d/m/Y" }}</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Presupuestos del plan -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-receipt me-2"></i>Presupuestos</h2>
+        <a href="{% url 'presupuestos:emitir' plan.id_plan_tratamiento %}" class="btn btn-primary btn-sm">
+          <i class="bi bi-plus"></i> Emitir
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% for pres in plan.presupuestos.all %}
+        <div class="d-flex align-items-center justify-content-between p-3"
+             style="border-bottom:1px solid var(--color-borde);">
+          <div>
+            <div style="font-size:12px;font-family:monospace;font-weight:700;color:var(--color-acento);">
+              {{ pres.numero_presupuesto }}
+            </div>
+            <div style="font-size:11px;color:var(--color-texto-muy-suave);">{{ pres.fecha_emision|date:"d/m/Y" }}</div>
+          </div>
+          <div class="text-end">
+            <div style="font-weight:700;font-size:14px;">{{ pres.monto_final|pesos_cl }}</div>
+            <span class="badge-estado {{ pres.estado_presupuesto }}" style="font-size:10px;">{{ pres.estado_presupuesto }}</span>
+          </div>
+          <a href="{% url 'presupuestos:detalle' pres.id_presupuesto %}" class="btn btn-outline btn-sm">
+            <i class="bi bi-eye"></i>
+          </a>
+        </div>
+        {% empty %}
+        <div style="padding:16px;text-align:center;font-size:13px;color:var(--color-texto-muy-suave);">
+          Sin presupuestos emitidos
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Anular Plan -->
+<div class="modal fade" id="modalAnularPlan" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title m-0"><i class="bi bi-exclamation-triangle me-2"></i> Anular Plan de Tratamiento</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <form action="{% url 'tratamientos:plan_estado' plan.id_plan_tratamiento %}" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="estado" value="anulado">
+        <div class="modal-body">
+          <div class="alert alert-warning">
+            Esta acción es irreversible y anulará el plan clínico.
+          </div>
+          <div class="form-group mb-0">
+            <label class="form-label text-danger">Motivo de la anulación <span class="text-danger">*</span></label>
+            <textarea name="motivo" class="form-control border-danger" rows="3" required placeholder="Especifique el motivo clínico o administrativo..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger"><i class="bi bi-x-circle"></i> Confirmar Anulación</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

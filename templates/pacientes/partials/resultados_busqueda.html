@@ -1,0 +1,17 @@
+﻿{# _patient_mini.html — usado en resultados buscador #}
+{% for paciente in pacientes %}
+<a href="{% url 'pacientes:detalle' paciente.id_paciente %}" class="search-result-item" role="option">
+  <div class="search-result-avatar" aria-hidden="true">{{ paciente.id_persona.nombres|first|upper }}</div>
+  <div>
+    <div class="search-result-name">{{ paciente.nombre_completo }}</div>
+    <div class="search-result-sub">{{ paciente.rut|rut_format }} {% if paciente.id_persona.telefono %}· {{ paciente.id_persona.telefono }}{% endif %}</div>
+  </div>
+  <span class="search-result-action">Ver →</span>
+</a>
+{% empty %}
+{% if q %}
+<div class="p-3 text-center" style="color:var(--color-texto-suave);font-size:13px;">
+  <i class="bi bi-search me-1"></i>Sin resultados para "{{ q }}"
+</div>
+{% endif %}
+{% endfor %}

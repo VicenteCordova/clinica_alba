@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Pacientes — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Gestión de Pacientes{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Pacientes</h1>
+    <p class="page-subtitle">{{ paginator.count }} paciente{{ paginator.count|pluralize }} registrado{{ paginator.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'pacientes:crear' %}" class="btn btn-primary">
+    <i class="bi bi-person-plus"></i> Nuevo paciente
+  </a>
+</div>
+
+<!-- Búsqueda -->
+<div class="card mb-4">
+  <div class="card-body" style="padding: 14px 20px;">
+    <form method="get" class="d-flex gap-3 align-items-center flex-wrap">
+      <div class="search-box" style="flex: 1; min-width: 200px;">
+        <i class="bi bi-search" style="color: var(--color-texto-muy-suave);"></i>
+        <input
+          type="search"
+          name="q"
+          value="{{ q }}"
+          placeholder="Buscar por RUT, nombre, correo o teléfono..."
+          id="busqueda-paciente"
+          autocomplete="off"
+        >
+      </div>
+      <button type="submit" class="btn btn-primary">
+        <i class="bi bi-search"></i> Buscar
+      </button>
+      {% if q %}
+      <a href="{% url 'pacientes:lista' %}" class="btn btn-outline">
+        <i class="bi bi-x"></i> Limpiar
+      </a>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Tabla -->
+<div class="card">
+  <div class="table-wrapper">
+    <table class="alba-table">
+      <thead>
+        <tr>
+          <th>Paciente</th>
+          <th>RUT</th>
+          <th>Contacto</th>
+          <th>Edad</th>
+          <th>Ficha</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for paciente in pacientes %}
+        <tr>
+          <td>
+            <div style="font-weight: 600;">{{ paciente.nombre_completo }}</div>
+            <div style="font-size: 11px; color: var(--color-texto-muy-suave);">
+              {{ paciente.id_persona.correo|default:"Sin correo" }}
+            </div>
+          </td>
+          <td style="font-family: monospace; font-size: 13px;">
+            {{ paciente.rut|rut_format }}
+          </td>
+          <td style="font-size: 13px;">
+            {{ paciente.id_persona.telefono|default:"—" }}
+          </td>
+          <td>
+            {% with paciente.id_persona.fecha_nacimiento|edad as e %}
+              {{ e|default:"—" }}{% if e %} años{% endif %}
+            {% endwith %}
+          </td>
+          <td>
+            {% if paciente.tiene_ficha %}
+            <span class="badge-estado activa">Con ficha</span>
+            {% else %}
+            <span class="badge-estado" style="background: #f1f5f9; color: #64748b;">Sin ficha</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'pacientes:detalle' paciente.id_paciente %}"
+                 class="btn btn-outline btn-sm" title="Ver detalle">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'pacientes:editar' paciente.id_paciente %}"
+                 class="btn btn-outline btn-sm" title="Editar">
+                <i class="bi bi-pencil"></i>
+              </a>
+              {% if paciente.tiene_ficha %}
+              <a href="{% url 'fichas:detalle' paciente.id_paciente %}"
+                 class="btn btn-success btn-sm" title="Ficha clínica">
+                <i class="bi bi-clipboard2-pulse"></i>
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6">
+            <div class="empty-state">
+              <div class="empty-state-icon">👥</div>
+              <div class="empty-state-title">
+                {% if q %}No se encontraron pacientes para "{{ q }}"{% else %}Sin pacientes registrados{% endif %}
+              </div>
+              {% if not q %}
+              <a href="{% url 'pacientes:crear' %}" class="btn btn-primary mt-3">
+                <i class="bi bi-person-plus"></i> Registrar primer paciente
+              </a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if pacientes %}
+  <div class="card-body pt-0">
+    {% include 'partials/_pagination.html' %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

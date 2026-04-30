@@ -1,0 +1,160 @@
+<!-- templates/pacientes/crear.html -->
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Nuevo paciente — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Nuevo paciente{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Nuevo paciente</h1>
+    <p class="page-subtitle">Completa los datos de identificación y contacto</p>
+  </div>
+  <a href="{% url 'pacientes:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+
+    <!-- Datos de persona -->
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-person me-2"></i>Datos personales</h2></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">RUT <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.rut placeholder="12.345.678-9" %}
+                {% if persona_form.rut.errors %}<div class="invalid-feedback d-block">{{ persona_form.rut.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Nombres <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.nombres %}
+                {% if persona_form.nombres.errors %}<div class="invalid-feedback d-block">{{ persona_form.nombres.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Apellido paterno <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.apellido_paterno %}
+                {% if persona_form.apellido_paterno.errors %}<div class="invalid-feedback d-block">{{ persona_form.apellido_paterno.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Apellido materno <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.apellido_materno %}
+                {% if persona_form.apellido_materno.errors %}<div class="invalid-feedback d-block">{{ persona_form.apellido_materno.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Fecha de nacimiento <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.fecha_nacimiento type="date" %}
+                {% if persona_form.fecha_nacimiento.errors %}<div class="invalid-feedback d-block">{{ persona_form.fecha_nacimiento.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Sexo <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.id_sexo %}
+                {% if persona_form.id_sexo.errors %}<div class="invalid-feedback d-block">{{ persona_form.id_sexo.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Correo electrónico</label>
+                {% render_field persona_form.correo %}
+                {% if persona_form.correo.errors %}<div class="invalid-feedback d-block">{{ persona_form.correo.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Teléfono <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.telefono placeholder="+56 9 1234 5678" %}
+                {% if persona_form.telefono.errors %}<div class="invalid-feedback d-block">{{ persona_form.telefono.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Dirección <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.direccion %}
+                {% if persona_form.direccion.errors %}<div class="invalid-feedback d-block">{{ persona_form.direccion.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Comuna <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.comuna %}
+                {% if persona_form.comuna.errors %}<div class="invalid-feedback d-block">{{ persona_form.comuna.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Ciudad <span style="color:#ef4444;">*</span></label>
+                {% render_field persona_form.ciudad %}
+                {% if persona_form.ciudad.errors %}<div class="invalid-feedback d-block">{{ persona_form.ciudad.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos de paciente -->
+      <div class="card">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-clipboard2-pulse me-2"></i>Datos clínicos y emergencia</h2></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Nombre contacto emergencia</label>
+                {% render_field paciente_form.contacto_emergencia_nombre %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Teléfono contacto emergencia</label>
+                {% render_field paciente_form.contacto_emergencia_telefono %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Observaciones administrativas</label>
+                {% render_field paciente_form.observaciones_administrativas rows="3" %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Panel lateral -->
+    <div class="col-lg-4">
+      <div class="card" style="position: sticky; top: 80px;">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-info-circle me-2"></i>Instrucciones</h2></div>
+        <div class="card-body">
+          <p style="font-size: 13px; color: var(--color-texto-suave);">
+            Los campos marcados con <span style="color:#ef4444;">*</span> son obligatorios.
+          </p>
+          <ul style="font-size: 13px; color: var(--color-texto-suave); padding-left: 16px; line-height: 1.8;">
+            <li>El RUT debe incluir puntos y guión</li>
+            <li>El sistema validará el dígito verificador</li>
+            <li>El correo electrónico debe ser único</li>
+          </ul>
+          <hr style="border-color: var(--color-borde);">
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-person-check"></i> Registrar paciente
+            </button>
+            <a href="{% url 'pacientes:lista' %}" class="btn btn-outline">Cancelar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

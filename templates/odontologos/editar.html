@@ -1,0 +1,90 @@
+<!-- templates/odontologos/editar.html -->
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Editar — Dr(a). {{ odontologo.nombre_completo }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Editar odontólogo{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Editar Dr(a). {{ odontologo.nombre_completo }}</h1>
+    <p class="page-subtitle">Registro Nº {{ odontologo.numero_registro }}</p>
+  </div>
+  <a href="{% url 'odontologos:detalle' odontologo.id_odontologo %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-person-badge me-2"></i>Datos profesionales</h2></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label class="form-label">Usuario</label>
+                <input type="text" class="form-control" value="{{ odontologo.id_usuario.nombre_completo }} ({{ odontologo.id_usuario.username }})" disabled>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">N° Registro <span style="color:#ef4444;">*</span></label>
+                {% render_field form.numero_registro %}
+                {% if form.numero_registro.errors %}<div class="invalid-feedback d-block">{{ form.numero_registro.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Duración cita base (min) <span style="color:#ef4444;">*</span></label>
+                {% render_field form.duracion_cita_base_min %}
+                {% if form.duracion_cita_base_min.errors %}<div class="invalid-feedback d-block">{{ form.duracion_cita_base_min.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Estado</label>
+                {% render_field form.estado_profesional %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-award me-2"></i>Especialidades</h2></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Especialidades</label>
+              <div style="max-height:200px;overflow-y:auto;padding:8px;border:1px solid var(--color-borde);border-radius:var(--radius);">
+                {% for esp in form.especialidades_sel %}
+                <div class="form-check mb-1">{{ esp }}</div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Especialidad principal</label>
+                {% render_field form.especialidad_principal %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card" style="position: sticky; top: 80px;">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-save me-2"></i>Guardar</h2></div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-check-lg"></i> Guardar cambios</button>
+            <a href="{% url 'odontologos:detalle' odontologo.id_odontologo %}" class="btn btn-outline">Cancelar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

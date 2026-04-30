@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Administrador — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Administración de Sistema{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="page-title">Panel de Administración</h1>
+    <p class="page-subtitle">Gestión global del sistema</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounts:usuarios_lista' %}" class="btn btn-primary"><i class="bi bi-people"></i> Usuarios</a>
+    <a href="{% url 'accounts:roles_lista' %}" class="btn btn-outline-primary"><i class="bi bi-shield-check"></i> Roles</a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-people me-2"></i>Usuarios Activos</h2>
+      </div>
+      <div class="card-body p-0">
+        <table class="alba-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in usuarios %}
+            <tr>
+              <td>{{ u.username }}</td>
+              <td>
+                <span class="badge {% if u.estado_acceso == 'activo' %}bg-success{% else %}bg-danger{% endif %}">
+                  {{ u.estado_acceso }}
+                </span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-shield-lock me-2"></i>Actividad Reciente (Auditoría)</h2>
+      </div>
+      <div class="card-body p-0">
+        <table class="alba-table" style="font-size: 0.85rem;">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Usuario</th>
+              <th>Módulo</th>
+              <th>Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for bitacora in actividad_reciente %}
+            <tr>
+              <td>{{ bitacora.fecha_evento|date:"d/m/Y H:i" }}</td>
+              <td>{{ bitacora.id_usuario.username }}</td>
+              <td>{{ bitacora.modulo }}</td>
+              <td>{{ bitacora.accion }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

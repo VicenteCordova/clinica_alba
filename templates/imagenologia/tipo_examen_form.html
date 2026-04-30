@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% block title %}{{ accion }} Tipo de Examen — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}{{ accion }} Tipo de Examen{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="page-title">{{ accion }} Tipo de Examen</h1>
+  </div>
+  <a href="{% url 'imagenologia:tipos_lista' %}" class="btn btn-outline">Cancelar</a>
+</div>
+
+<div class="card" style="max-width: 600px;">
+  <div class="card-body">
+    <form method="post">
+      {% csrf_token %}
+      
+      <div class="mb-3">
+        <label class="form-label">Nombre del Tipo de Examen *</label>
+        <input type="text" name="nombre" class="form-control" value="{{ tipo.nombre|default:'' }}" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Descripción</label>
+        <textarea name="descripcion" class="form-control" rows="3">{{ tipo.descripcion|default:'' }}</textarea>
+      </div>
+
+      {% if accion == 'Editar' %}
+      <div class="mb-4">
+        <label class="form-label">Estado</label>
+        <select name="estado" class="form-select">
+          <option value="activo" {% if tipo.estado == 'activo' %}selected{% endif %}>Activo</option>
+          <option value="inactivo" {% if tipo.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+        </select>
+      </div>
+      {% endif %}
+
+      <button type="submit" class="btn btn-primary w-100">Guardar Cambios</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

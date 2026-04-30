@@ -1,0 +1,110 @@
+<!-- templates/odontologos/detalle.html -->
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Dr(a). {{ odontologo.nombre_completo }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Perfil de odontólogo{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dr(a). {{ odontologo.nombre_completo }}</h1>
+    <p class="page-subtitle">Registro Nº {{ odontologo.numero_registro }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'odontologos:editar' odontologo.id_odontologo %}" class="btn btn-outline"><i class="bi bi-pencil"></i> Editar</a>
+    <a href="{% url 'odontologos:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-body text-center" style="padding:28px 20px;">
+        <div style="width:80px;height:80px;background:linear-gradient(135deg,var(--color-acento),#a78bfa);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;color:white;font-weight:700;margin:0 auto 14px;">
+          {{ odontologo.id_usuario.id_persona.nombres|first|upper }}
+        </div>
+        <div style="font-size:18px;font-weight:700;">Dr(a). {{ odontologo.nombre_completo }}</div>
+        <div style="font-size:13px;color:var(--color-texto-suave);margin:6px 0 12px;">Reg. {{ odontologo.numero_registro }}</div>
+        <span class="badge-estado {{ odontologo.estado_profesional }}">{{ odontologo.estado_profesional }}</span>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-award me-2"></i>Especialidades</h2></div>
+      <div class="card-body">
+        {% for oe in odontologo.odontologo_especialidades.all %}
+        <div class="mb-2 d-flex align-items-center gap-2">
+          <span style="width:8px;height:8px;background:var(--color-acento);border-radius:50%;display:inline-block;flex-shrink:0;"></span>
+          <span>{{ oe.especialidad.nombre }}</span>
+          {% if oe.es_principal %}<span style="font-size:11px;color:#5b21b6;font-weight:600;">(principal)</span>{% endif %}
+        </div>
+        {% empty %}
+        <div style="color:var(--color-texto-muy-suave);font-size:13px;">Sin especialidades registradas</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-telephone me-2"></i>Contacto</h2></div>
+      <div class="card-body">
+        {% with p=odontologo.id_usuario.id_persona %}
+        <div class="mb-2"><i class="bi bi-envelope me-2" style="color:var(--color-acento);"></i>{{ p.correo|default:"—" }}</div>
+        <div class="mb-2"><i class="bi bi-phone me-2" style="color:var(--color-acento);"></i>{{ p.telefono|default:"—" }}</div>
+        <div><i class="bi bi-geo-alt me-2" style="color:var(--color-acento);"></i>{{ p.ciudad|default:"—" }}</div>
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <!-- Horarios -->
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-clock me-2"></i>Horarios de atención</h2></div>
+      <div class="table-wrapper" style="border:none;border-radius:0;">
+        <table class="alba-table">
+          <thead>
+            <tr><th>Día</th><th>Hora inicio</th><th>Hora fin</th><th>Estado</th></tr>
+          </thead>
+          <tbody>
+            {% for horario in odontologo.horarios.all %}
+            <tr>
+              <td style="font-weight:600;">{{ horario.get_dia_semana_display }}</td>
+              <td>{{ horario.hora_inicio }}</td>
+              <td>{{ horario.hora_fin }}</td>
+              <td><span class="badge-estado {{ horario.estado_horario }}">{{ horario.estado_horario }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4" style="text-align:center;color:var(--color-texto-muy-suave);padding:20px;">Sin horarios registrados</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Próximas citas -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-calendar3 me-2"></i>Próximas citas</h2>
+        <a href="{% url 'agenda:calendario' %}?odontologo={{ odontologo.id_odontologo }}" class="btn btn-outline btn-sm">Ver agenda</a>
+      </div>
+      <div class="table-wrapper" style="border:none;border-radius:0;">
+        <table class="alba-table">
+          <thead><tr><th>Fecha</th><th>Paciente</th><th>Box</th><th>Estado</th></tr></thead>
+          <tbody>
+            {% for cita in odontologo.citas.all|slice:":8" %}
+            <tr>
+              <td>{{ cita.fecha_hora_inicio|date:"d/m/Y H:i" }}</td>
+              <td>{{ cita.id_paciente.nombre_completo }}</td>
+              <td>{{ cita.id_box.nombre }}</td>
+              <td><span class="badge-estado {{ cita.id_estado_cita.nombre }}">{{ cita.id_estado_cita.nombre }}</span></td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="4"><div class="empty-state" style="padding:20px;"><div class="empty-state-icon">📅</div><div class="empty-state-title">Sin citas próximas</div></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,215 @@
+{% extends 'base.html' %}
+{% load core_tags humanize %}
+{% block title %}Atención — {{ paciente.nombre_completo }}{% endblock %}
+{% block topbar_title %}Modo Atención Clínica{% endblock %}
+{% block breadcrumb %}<a href="{% url 'dashboard:index' %}">Inicio</a><span class="breadcrumb-sep">/</span><a href="{% url 'agenda:calendario' %}">Agenda</a><span class="breadcrumb-sep">/</span><a href="{% url 'pacientes:detalle' paciente.id_paciente %}">{{ paciente.nombre_completo|truncatechars:20 }}</a><span class="breadcrumb-sep">/</span>Atención{% endblock %}
+{% block content %}
+
+<!-- Header clínico -->
+<div class="clinical-header">
+  <div class="d-flex align-items-center gap-3 flex-wrap">
+    <div class="patient-avatar-lg" style="width:52px;height:52px;font-size:22px;" aria-hidden="true">{{ paciente.id_persona.nombres|first|upper }}</div>
+    <div>
+      <div class="clinical-mode-badge mb-1">Modo atención clínica activa</div>
+      <h1 class="page-title mb-1" style="font-size:20px;">{{ paciente.nombre_completo }}</h1>
+      <div class="d-flex flex-wrap gap-3" style="font-size:12px;color:var(--color-texto-suave);">
+        <span><i class="bi bi-person-vcard" aria-hidden="true"></i> {{ paciente.rut|rut_format }}</span>
+        {% if paciente.id_persona.fecha_nacimiento %}<span><i class="bi bi-calendar-heart" aria-hidden="true"></i> {{ paciente.id_persona.fecha_nacimiento|edad }} años</span>{% endif %}
+        <span><i class="bi bi-folder2-open" aria-hidden="true"></i> Ficha {{ ficha.numero_ficha }}</span>
+        <span><i class="bi bi-clock" aria-hidden="true"></i> {{ cita.fecha_hora_inicio|date:"d/m/Y H:i" }}</span>
+        <span><i class="bi bi-person-badge" aria-hidden="true"></i> Dr(a). {{ cita.id_odontologo.nombre_completo }}</span>
+        <span class="badge-estado {{ cita.id_estado_cita.nombre }}">{{ cita.id_estado_cita.nombre }}</span>
+      </div>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <a href="{% url 'pacientes:detalle' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> Centro del Paciente</a>
+    <form method="post" style="display:inline;">{% csrf_token %}<input type="hidden" name="accion" value="finalizar"><button type="submit" class="btn btn-success btn-sm"><i class="bi bi-check-circle" aria-hidden="true"></i> Finalizar atención</button></form>
+  </div>
+</div>
+
+{% if ficha.observaciones_clinicas_generales %}
+<div class="alert alert-warning mb-4">
+  <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+  <div><strong>Alerta clínica:</strong> {{ ficha.observaciones_clinicas_generales }}</div>
+</div>
+{% endif %}
+
+<!-- Layout 3 columnas -->
+<div class="clinical-layout">
+
+  <!-- Columna izquierda: info rápida del paciente -->
+  <div class="clinical-sidebar">
+
+    <!-- Antecedentes -->
+    <div class="card mb-3">
+      <div class="card-header"><h2 class="card-title" style="font-size:13px;"><i class="bi bi-heart-pulse me-2" aria-hidden="true"></i>Antecedentes</h2></div>
+      <div class="card-body" style="padding:14px;">
+        {% for registro in antecedentes|slice:":3" %}
+        <div class="mb-2">
+          {% for det in registro.detalles.all %}
+          <span class="badge-estado advertencia" style="font-size:10px;margin-right:4px;margin-bottom:4px;">{{ det.id_catalogo_antecedente.nombre }}</span>
+          {% endfor %}
+        </div>
+        {% empty %}
+        <div style="font-size:12px;color:var(--color-texto-suave);">Sin antecedentes registrados.</div>
+        {% endfor %}
+        <a href="{% url 'antecedentes:lista' paciente.id_paciente %}" class="btn btn-ghost btn-sm w-100 mt-2" style="font-size:11px;">Ver todos los antecedentes</a>
+      </div>
+    </div>
+
+    <!-- Imagenología reciente -->
+    <div class="card mb-3">
+      <div class="card-header">
+        <h2 class="card-title" style="font-size:13px;"><i class="bi bi-images me-2" aria-hidden="true"></i>Exámenes</h2>
+        <a href="{% url 'imagenologia:crear' paciente.id_paciente %}?cita={{ cita.id_cita }}" class="btn btn-primary btn-sm" style="font-size:10px;"><i class="bi bi-upload" aria-hidden="true"></i></a>
+      </div>
+      <div class="card-body p-0">
+        {% for examen in imagenes|slice:":3" %}
+        <a href="{% url 'imagenologia:detalle' examen.id_examen %}" class="d-flex justify-content-between align-items-center p-2 text-decoration-none" style="border-bottom:1px solid var(--color-borde);color:var(--color-texto);font-size:12px;">
+          <div><strong class="d-block">{{ examen.tipo_examen.nombre }}</strong><span style="color:var(--color-texto-suave);">{{ examen.fecha_examen|date:"d/m/Y" }}</span></div>
+          <i class="bi bi-chevron-right" style="color:var(--color-texto-muy-suave);" aria-hidden="true"></i>
+        </a>
+        {% empty %}
+        <div style="font-size:12px;color:var(--color-texto-suave);padding:12px 14px;">Sin exámenes cargados.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Resumen financiero -->
+    <div class="card">
+      <div class="card-header"><h2 class="card-title" style="font-size:13px;"><i class="bi bi-cash-stack me-2" aria-hidden="true"></i>Finanzas</h2></div>
+      <div class="card-body p-0">
+        {% for pres in presupuestos|slice:":3" %}
+        <div class="p-2" style="border-bottom:1px solid var(--color-borde);font-size:12px;">
+          <div class="d-flex justify-content-between"><a href="{% url 'presupuestos:detalle' pres.id_presupuesto %}" class="fw-bold text-decoration-none">{{ pres.numero_presupuesto }}</a><span class="badge-estado {{ pres.estado_presupuesto }}" style="font-size:10px;">{{ pres.estado_presupuesto }}</span></div>
+          <div class="d-flex justify-content-between mt-1"><span>Total {{ pres.monto_final|pesos_cl }}</span><span style="color:{% if pres.saldo_pendiente > 0 %}var(--color-error){% else %}var(--color-exito){% endif %};">Saldo {{ pres.saldo_pendiente|pesos_cl }}</span></div>
+        </div>
+        {% empty %}
+        <div style="font-size:12px;color:var(--color-texto-suave);padding:12px 14px;">Sin presupuestos asociados.</div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna central: evolución clínica -->
+  <div class="clinical-main">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-journal-medical me-2" aria-hidden="true"></i>Evolución clínica</h2>
+        {% if evolucion %}<span style="font-size:11px;color:var(--color-texto-suave);">Última actualización: {{ evolucion.fecha_actualizacion|date:"d/m/Y H:i" }}</span>{% endif %}
+      </div>
+      <div class="card-body">
+        <form method="post" class="clinical-form" data-autosave="true">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="guardar_evolucion">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label" for="motivo_consulta">Motivo de consulta <span class="text-error">*</span></label>
+              <textarea id="motivo_consulta" name="motivo_consulta" class="form-control" rows="3" placeholder="Describe el motivo de la consulta..." aria-required="true">{{ evolucion.motivo_consulta|default:cita.motivo_consulta }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="anamnesis">Anamnesis</label>
+              <textarea id="anamnesis" name="anamnesis" class="form-control" rows="3" placeholder="Historia clínica relevante...">{{ evolucion.anamnesis|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="diagnostico">Diagnóstico clínico <span class="text-error">*</span></label>
+              <textarea id="diagnostico" name="diagnostico" class="form-control" rows="4" placeholder="Diagnóstico del profesional..." aria-required="true">{{ evolucion.diagnostico|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="procedimiento_realizado">Procedimiento realizado</label>
+              <textarea id="procedimiento_realizado" name="procedimiento_realizado" class="form-control" rows="4" placeholder="Describe el procedimiento realizado...">{{ evolucion.procedimiento_realizado|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="indicaciones">Indicaciones al paciente</label>
+              <textarea id="indicaciones" name="indicaciones" class="form-control" rows="3" placeholder="Indicaciones post-atención...">{{ evolucion.indicaciones|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="tratamiento_sugerido">Tratamiento sugerido</label>
+              <textarea id="tratamiento_sugerido" name="tratamiento_sugerido" class="form-control" rows="3" placeholder="Tratamientos a considerar...">{{ evolucion.tratamiento_sugerido|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="proxima_accion">Próxima acción / Control</label>
+              <textarea id="proxima_accion" name="proxima_accion" class="form-control" rows="3" placeholder="Próximo control o derivación...">{{ evolucion.proxima_accion|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label" for="observaciones">Observaciones clínicas</label>
+              <textarea id="observaciones" name="observaciones" class="form-control" rows="3" placeholder="Observaciones adicionales...">{{ evolucion.observaciones|default:"" }}</textarea>
+            </div>
+          </div>
+          <div class="d-flex justify-content-between align-items-center mt-4">
+            <span data-save-indicator style="font-size:12px;color:var(--color-texto-suave);"></span>
+            <button type="submit" class="btn btn-clinical"><i class="bi bi-save" aria-hidden="true"></i> Guardar evolución</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Odontograma -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-file-earmark-medical me-2" aria-hidden="true"></i>Odontograma</h2>
+        <a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}?cita={{ cita.id_cita }}{% if evolucion %}&evolucion={{ evolucion.id_evolucion }}{% endif %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo</a>
+      </div>
+      <div class="card-body">
+        {% if odontograma_actual %}
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <div><strong>Versión {{ odontograma_actual.version }}</strong><div style="font-size:12px;color:var(--color-texto-suave);">{{ odontograma_actual.fecha_registro|date:"d/m/Y H:i" }}</div></div>
+          <a href="{% url 'odontograma:detalle' odontograma_actual.id_odontograma %}" class="btn btn-clinical"><i class="bi bi-palette" aria-hidden="true"></i> Abrir odontograma interactivo</a>
+        </div>
+        {% else %}
+        {% include "partials/_empty_state.html" with icon="🦷" title="Sin odontograma" desc="Crea un odontograma para registrar condiciones por pieza y superficie dental." %}
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Planes de tratamiento -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-list-check me-2" aria-hidden="true"></i>Planes y presupuestos</h2>
+        {% if request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}<a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}?cita={{ cita.id_cita }}{% if evolucion %}&evolucion={{ evolucion.id_evolucion }}{% endif %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle" aria-hidden="true"></i> Nuevo plan</a>{% endif %}
+      </div>
+      <div class="card-body p-0">
+        <div class="table-wrapper" style="border:none;border-radius:0;">
+          <table class="alba-table" aria-label="Planes de tratamiento">
+            <thead><tr><th>Plan</th><th>Estado</th><th>Total est.</th><th>Presupuestos</th><th class="text-end"></th></tr></thead>
+            <tbody>
+              {% for plan in planes %}
+              <tr>
+                <td data-label="Plan">#{{ plan.id_plan_tratamiento }}<div style="font-size:11px;color:var(--color-texto-muy-suave);">{{ plan.fecha_creacion|date:"d/m/Y" }}</div></td>
+                <td data-label="Estado"><span class="badge-estado {{ plan.estado_plan }}">{{ plan.estado_plan }}</span></td>
+                <td data-label="Total">{{ plan.total_estimado|pesos_cl }}</td>
+                <td data-label="Presupuestos">{{ plan.presupuestos.count }}</td>
+                <td class="text-end"><a href="{% url 'tratamientos:plan_detalle' plan.id_plan_tratamiento %}" class="btn btn-outline btn-sm">Ver</a></td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="5">{% include "partials/_empty_state.html" with icon="📋" title="Sin planes de tratamiento" desc="Crea un plan de tratamiento para organizar los procedimientos clínicos." %}</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna derecha: acciones rápidas -->
+  <div class="clinical-actions-col">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title" style="font-size:13px;"><i class="bi bi-lightning me-2" aria-hidden="true"></i>Acciones rápidas</h2></div>
+      <div class="card-body d-grid gap-2">
+        <a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}" class="btn btn-outline btn-sm"><i class="bi bi-file-earmark-medical" aria-hidden="true"></i> Nuevo odontograma</a>
+        {% if request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}<a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-outline btn-sm"><i class="bi bi-list-check" aria-hidden="true"></i> Nuevo plan</a>{% endif %}
+        <a href="{% url 'imagenologia:crear' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Subir adjunto</a>
+        <a href="{% url 'antecedentes:lista' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-heart-pulse" aria-hidden="true"></i> Ver antecedentes</a>
+        <hr class="divider">
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="finalizar">
+          <button type="submit" class="btn btn-success w-100"><i class="bi bi-check-circle" aria-hidden="true"></i> Cerrar atención</button>
+        </form>
+        <a href="{% url 'pacientes:detalle' paciente.id_paciente %}" class="btn btn-ghost btn-sm w-100"><i class="bi bi-arrow-left" aria-hidden="true"></i> Volver al paciente</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

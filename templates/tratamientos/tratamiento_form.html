@@ -1,0 +1,85 @@
+<!-- templates/tratamientos/tratamiento_form.html -->
+{% extends 'base.html' %}
+{% load widget_tweaks core_tags %}
+{% block title %}{{ titulo }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ titulo }}</h1>
+    <p class="page-subtitle">Administra el catálogo de tratamientos odontológicos</p>
+  </div>
+  <a href="{% url 'tratamientos:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-clipboard2-pulse me-2"></i>Datos del tratamiento</h2></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Código <span style="color:#ef4444;">*</span></label>
+                {% render_field form.codigo %}
+                {% if form.codigo.errors %}<div class="invalid-feedback d-block">{{ form.codigo.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-8">
+              <div class="form-group">
+                <label class="form-label">Nombre <span style="color:#ef4444;">*</span></label>
+                {% render_field form.nombre %}
+                {% if form.nombre.errors %}<div class="invalid-feedback d-block">{{ form.nombre.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Descripción</label>
+                {% render_field form.descripcion %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Valor referencial ($) <span style="color:#ef4444;">*</span></label>
+                {% render_field form.valor_referencial %}
+                {% if form.valor_referencial.errors %}<div class="invalid-feedback d-block">{{ form.valor_referencial.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Duración estimada (min)</label>
+                {% render_field form.duracion_estimada_min %}
+                {% if form.duracion_estimada_min.errors %}<div class="invalid-feedback d-block">{{ form.duracion_estimada_min.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Estado</label>
+                {% render_field form.estado_tratamiento %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card" style="position: sticky; top: 80px;">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-save me-2"></i>Guardar</h2></div>
+        <div class="card-body">
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-check-lg"></i>
+              {% if tratamiento %}Guardar cambios{% else %}Crear tratamiento{% endif %}
+            </button>
+            <a href="{% url 'tratamientos:lista' %}" class="btn btn-outline">Cancelar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

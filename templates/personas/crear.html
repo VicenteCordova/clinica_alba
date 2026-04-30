@@ -1,0 +1,104 @@
+<!-- templates/personas/crear.html -->
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Nueva persona — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Nueva persona{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Nueva persona</h1>
+    <p class="page-subtitle">Registra los datos de identificación de la persona</p>
+  </div>
+  <a href="{% url 'personas:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-person me-2"></i>Datos personales</h2></div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">RUT <span style="color:#ef4444;">*</span></label>
+                {% render_field form.rut class="form-control" placeholder="12.345.678-9" %}
+                {% if form.rut.errors %}<div class="invalid-feedback d-block">{{ form.rut.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Nombres <span style="color:#ef4444;">*</span></label>
+                {% render_field form.nombres class="form-control" %}
+                {% if form.nombres.errors %}<div class="invalid-feedback d-block">{{ form.nombres.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Apellido paterno <span style="color:#ef4444;">*</span></label>
+                {% render_field form.apellido_paterno class="form-control" %}
+                {% if form.apellido_paterno.errors %}<div class="invalid-feedback d-block">{{ form.apellido_paterno.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Apellido materno</label>
+                {% render_field form.apellido_materno class="form-control" %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Fecha de nacimiento</label>
+                {% render_field form.fecha_nacimiento class="form-control" type="date" %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Sexo</label>
+                {% render_field form.id_sexo class="form-select" %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Correo electrónico</label>
+                {% render_field form.correo class="form-control" %}
+                {% if form.correo.errors %}<div class="invalid-feedback d-block">{{ form.correo.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Teléfono</label>
+                {% render_field form.telefono class="form-control" placeholder="+56 9 1234 5678" %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Dirección</label>
+                {% render_field form.direccion class="form-control" %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Comuna</label>
+                {% render_field form.comuna class="form-control" %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Ciudad</label>
+                {% render_field form.ciudad class="form-control" %}
+              </div>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Guardar persona</button>
+            <a href="{% url 'personas:lista' %}" class="btn btn-outline">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

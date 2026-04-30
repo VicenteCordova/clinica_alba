@@ -1,0 +1,102 @@
+<!-- templates/odontologos/crear.html -->
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}Nuevo odontólogo — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Nuevo odontólogo{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Registrar odontólogo</h1>
+    <p class="page-subtitle">Asocia un usuario existente como profesional odontológico</p>
+  </div>
+  <a href="{% url 'odontologos:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<form method="post" novalidate>
+  {% csrf_token %}
+  <div class="row g-4">
+    <div class="col-lg-8">
+      <div class="card mb-4">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-person-badge me-2"></i>Datos profesionales</h2></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-12">
+              <div class="form-group">
+                <label class="form-label">Usuario del sistema <span style="color:#ef4444;">*</span></label>
+                <select name="id_usuario" class="form-select" required>
+                  <option value="">— Seleccionar usuario —</option>
+                  {% for u in usuarios_disponibles %}
+                  <option value="{{ u.id_usuario }}">{{ u.nombre_completo }} ({{ u.username }})</option>
+                  {% endfor %}
+                </select>
+                <small style="color:var(--color-texto-muy-suave);">Solo usuarios activos sin perfil de odontólogo</small>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">N° Registro <span style="color:#ef4444;">*</span></label>
+                {% render_field form.numero_registro placeholder="Ej: 12345" %}
+                {% if form.numero_registro.errors %}<div class="invalid-feedback d-block">{{ form.numero_registro.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Duración cita base (min) <span style="color:#ef4444;">*</span></label>
+                {% render_field form.duracion_cita_base_min %}
+                {% if form.duracion_cita_base_min.errors %}<div class="invalid-feedback d-block">{{ form.duracion_cita_base_min.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Estado</label>
+                {% render_field form.estado_profesional %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-award me-2"></i>Especialidades</h2></div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Especialidades</label>
+              <div style="max-height:200px;overflow-y:auto;padding:8px;border:1px solid var(--color-borde);border-radius:var(--radius);">
+                {% for esp in form.especialidades_sel %}
+                <div class="form-check mb-1">{{ esp }}</div>
+                {% endfor %}
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="form-group">
+                <label class="form-label">Especialidad principal</label>
+                {% render_field form.especialidad_principal %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4">
+      <div class="card" style="position: sticky; top: 80px;">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-info-circle me-2"></i>Instrucciones</h2></div>
+        <div class="card-body">
+          <ul style="font-size: 13px; color: var(--color-texto-suave); padding-left: 16px; line-height: 1.8;">
+            <li>El usuario debe existir previamente en el sistema</li>
+            <li>El N° de registro debe ser único</li>
+            <li>La duración base se usa para calcular slots en agenda</li>
+          </ul>
+          <hr style="border-color: var(--color-borde);">
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary btn-lg"><i class="bi bi-person-check"></i> Registrar odontólogo</button>
+            <a href="{% url 'odontologos:lista' %}" class="btn btn-outline">Cancelar</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}

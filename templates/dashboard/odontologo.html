@@ -1,0 +1,169 @@
+﻿{% extends 'base.html' %}
+{% load core_tags humanize %}
+
+{% block title %}Mi Panel — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Mi Panel Clínico{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Hola, Dr(a). {{ request.user.nombre_completo|truncatewords:2 }} 🦷</h1>
+    <p class="page-subtitle">{% now "l, d \d\e F \d\e Y" %} — Agenda del día</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'agenda:calendario' %}" class="btn btn-outline">
+      <i class="bi bi-calendar3" aria-hidden="true"></i> Mi agenda
+    </a>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:20px;">
+  <div class="kpi-card kpi-celeste kpi-card-clinical">
+    <div class="kpi-icon"><i class="bi bi-calendar-day" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas_hoy.count }}</div>
+    <div class="kpi-label">Citas hoy</div>
+  </div>
+  <div class="kpi-card kpi-melocoton kpi-card-warning">
+    <div class="kpi-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas_en_espera }}</div>
+    <div class="kpi-label">En espera</div>
+  </div>
+  <div class="kpi-card kpi-menta kpi-card-success">
+    <div class="kpi-icon"><i class="bi bi-person-check" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas_atendidas }}</div>
+    <div class="kpi-label">Atendidas</div>
+  </div>
+  <div class="kpi-card kpi-lavanda">
+    <div class="kpi-icon"><i class="bi bi-journal-medical" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ evoluciones_pendientes }}</div>
+    <div class="kpi-label">Pendientes de cerrar</div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Próxima cita y agenda del día -->
+  <div class="col-xl-8">
+
+    {% if proxima_cita %}
+    <!-- Próximo paciente destacado -->
+    <div class="card mb-4" style="border:2px solid var(--color-acento);background:linear-gradient(135deg,white,var(--color-acento-light));">
+      <div class="card-body" style="padding:20px 24px;">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+          <div class="d-flex align-items-center gap-3">
+            <div class="patient-avatar-lg" style="width:52px;height:52px;font-size:22px;" aria-hidden="true">
+              {{ proxima_cita.id_paciente.id_persona.nombres|first|upper }}
+            </div>
+            <div>
+              <div class="clinical-mode-badge mb-1">Próximo paciente</div>
+              <div style="font-size:17px;font-weight:800;color:var(--color-texto);">
+                {{ proxima_cita.id_paciente.nombre_completo }}
+              </div>
+              <div style="font-size:12px;color:var(--color-texto-suave);">
+                <i class="bi bi-clock me-1" aria-hidden="true"></i>{{ proxima_cita.fecha_hora_inicio|date:"H:i" }}
+                &nbsp;·&nbsp;
+                <i class="bi bi-door-open me-1" aria-hidden="true"></i>{{ proxima_cita.id_box.nombre }}
+                &nbsp;·&nbsp;
+                <span class="badge-estado {{ proxima_cita.id_estado_cita.nombre }}">{{ proxima_cita.id_estado_cita.nombre }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="{% url 'pacientes:detalle' proxima_cita.id_paciente_id %}" class="btn btn-outline btn-sm">
+              <i class="bi bi-person" aria-hidden="true"></i> Ver paciente
+            </a>
+            <a href="{% url 'fichas:modo_atencion' proxima_cita.id_cita %}" class="btn btn-clinical">
+              <i class="bi bi-play-circle" aria-hidden="true"></i> Iniciar atención
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Timeline agenda del día -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-list-ul me-2" aria-hidden="true"></i>Agenda de hoy</h2>
+      </div>
+      <div class="card-body p-0">
+        {% if citas_hoy %}
+        <div class="table-wrapper" style="border:none;border-radius:0;">
+          <table class="alba-table" aria-label="Mis citas del día">
+            <thead>
+              <tr><th>Hora</th><th>Paciente</th><th>Tipo</th><th>Box</th><th>Estado</th><th class="text-end">Acción</th></tr>
+            </thead>
+            <tbody>
+              {% for cita in citas_hoy %}
+              <tr>
+                <td data-label="Hora"><strong>{{ cita.fecha_hora_inicio|date:"H:i" }}</strong></td>
+                <td data-label="Paciente">
+                  <a href="{% url 'pacientes:detalle' cita.id_paciente_id %}" style="color:var(--color-texto);font-weight:600;text-decoration:none;">
+                    {{ cita.id_paciente.nombre_completo }}
+                  </a>
+                </td>
+                <td data-label="Tipo" style="font-size:12px;">{{ cita.id_tipo_atencion.nombre }}</td>
+                <td data-label="Box" style="font-size:12px;">{{ cita.id_box.nombre }}</td>
+                <td data-label="Estado">
+                  <span class="badge-estado {{ cita.id_estado_cita.nombre }}">{{ cita.id_estado_cita.nombre }}</span>
+                </td>
+                <td class="text-end" data-label="Acción">
+                  {% if cita.id_estado_cita.nombre == 'en_espera' or cita.id_estado_cita.nombre == 'en_atencion' %}
+                  <a href="{% url 'fichas:modo_atencion' cita.id_cita %}" class="btn btn-clinical btn-sm">
+                    <i class="bi bi-play-circle" aria-hidden="true"></i> Atender
+                  </a>
+                  {% else %}
+                  <a href="{% url 'agenda:detalle_cita' cita.id_cita %}" class="btn btn-ghost btn-sm">
+                    <i class="bi bi-eye" aria-hidden="true"></i>
+                  </a>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        {% include 'partials/_empty_state.html' with icon="🦷" title="Sin citas para hoy" desc="No tienes citas asignadas para el día de hoy." %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel lateral clínico -->
+  <div class="col-xl-4">
+    <!-- Últimas evoluciones -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-journal-medical me-2" aria-hidden="true"></i>Últimas evoluciones</h2>
+      </div>
+      <div class="card-body p-0">
+        {% for evol in ultimas_evoluciones %}
+        <a href="{% url 'fichas:evolucion_detalle' evol.id_evolucion %}" class="d-flex align-items-start gap-3 p-3 text-decoration-none" style="border-bottom:1px solid var(--color-borde);color:var(--color-texto);">
+          <div style="flex-shrink:0;width:36px;height:36px;background:var(--color-menta);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#065f46;font-weight:700;font-size:12px;" aria-hidden="true">
+            {{ evol.id_cita.id_paciente.id_persona.nombres|first|upper }}
+          </div>
+          <div>
+            <div style="font-size:13px;font-weight:600;">{{ evol.id_cita.id_paciente.nombre_completo }}</div>
+            <div style="font-size:11px;color:var(--color-texto-suave);">{{ evol.fecha_evolucion|date:"d/m/Y H:i" }}</div>
+            {% if evol.diagnostico %}<div style="font-size:12px;color:var(--color-texto-suave);">{{ evol.diagnostico|truncatechars:60 }}</div>{% endif %}
+          </div>
+        </a>
+        {% empty %}
+        <div class="empty-state py-3">
+          <div class="empty-state-title" style="font-size:13px;">Sin evoluciones recientes</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Alertas -->
+    {% if atenciones_pendientes %}
+    <div class="alert alert-warning">
+      <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+      <div><strong>{{ atenciones_pendientes }} atención(es)</strong> pendiente(s) de cerrar de días anteriores.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

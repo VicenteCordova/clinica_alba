@@ -1,0 +1,335 @@
+{% extends 'base.html' %}
+{% load core_tags humanize %}
+{% block title %}{{ paciente.nombre_completo }} — Centro del Paciente{% endblock %}
+{% block topbar_title %}Centro del Paciente{% endblock %}
+{% block breadcrumb %}<a href="{% url 'dashboard:index' %}">Inicio</a><span class="breadcrumb-sep">/</span><a href="{% url 'pacientes:lista' %}">Pacientes</a><span class="breadcrumb-sep">/</span>{{ paciente.nombre_completo|truncatechars:30 }}{% endblock %}
+{% block content %}
+<div class="patient-header-premium">
+  <div class="d-flex align-items-center gap-4 flex-wrap">
+    <div class="patient-avatar-lg" aria-hidden="true">{{ paciente.id_persona.nombres|first|upper }}</div>
+    <div class="flex-grow-1">
+      <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+        <h1 class="patient-info-name">{{ paciente.nombre_completo }}</h1>
+        {% if tiene_ficha %}<span class="badge-estado activa" style="font-size:11px;">Ficha activa</span>{% else %}<span class="badge-estado cerrada" style="font-size:11px;">Sin ficha</span>{% endif %}
+      </div>
+      {% if tiene_ficha and ficha.observaciones_clinicas_generales %}
+      <div class="patient-alert-chip mb-2">
+        <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+        {{ ficha.observaciones_clinicas_generales|truncatechars:80 }}
+      </div>
+      {% endif %}
+      <div class="patient-info-meta">
+        <span><i class="bi bi-person-vcard" aria-hidden="true"></i> {{ paciente.rut|rut_format }}</span>
+        {% if paciente.id_persona.fecha_nacimiento %}<span><i class="bi bi-calendar-heart" aria-hidden="true"></i> {{ paciente.id_persona.fecha_nacimiento|edad }} años</span>{% endif %}
+        {% if paciente.id_persona.telefono %}<span><i class="bi bi-telephone" aria-hidden="true"></i> {{ paciente.id_persona.telefono }}</span>{% endif %}
+        {% if paciente.id_persona.correo %}<span><i class="bi bi-envelope" aria-hidden="true"></i> {{ paciente.id_persona.correo }}</span>{% endif %}
+        {% if tiene_ficha %}<span><i class="bi bi-folder2-open" aria-hidden="true"></i> Ficha {{ ficha.numero_ficha }}</span>{% endif %}
+      </div>
+    </div>
+    <div class="d-flex flex-column gap-2 flex-shrink-0">
+      <a href="{% url 'agenda:crear_cita' %}?paciente={{ paciente.id_paciente }}" class="btn btn-outline btn-sm"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Agendar</a>
+      {% if not tiene_ficha %}
+      <form method="post" action="{% url 'fichas:abrir' paciente.id_paciente %}">{% csrf_token %}<button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-folder-plus" aria-hidden="true"></i> Abrir ficha</button></form>
+      {% elif proxima_cita %}
+      <a href="{% url 'fichas:modo_atencion' proxima_cita.id_cita %}" class="btn btn-clinical btn-sm"><i class="bi bi-play-circle" aria-hidden="true"></i> Iniciar atención</a>
+      {% endif %}
+      <a href="{% url 'pacientes:editar' paciente.id_paciente %}" class="btn btn-ghost btn-sm"><i class="bi bi-pencil" aria-hidden="true"></i> Editar datos</a>
+    </div>
+  </div>
+</div>
+
+<!-- Cards resumen -->
+<div class="patient-summary-cards">
+  <div class="patient-summary-card">
+    <div class="patient-summary-label">Próxima cita</div>
+    <div class="patient-summary-value" style="font-size:12px;">{% if proxima_cita %}{{ proxima_cita.fecha_hora_inicio|date:"d/m H:i" }}{% else %}Sin cita{% endif %}</div>
+  </div>
+  <div class="patient-summary-card">
+    <div class="patient-summary-label">Saldo pendiente</div>
+    <div class="patient-summary-value {% if deuda_total > 0 %}danger{% endif %}">{{ deuda_total|pesos_cl }}</div>
+  </div>
+  <div class="patient-summary-card">
+    <div class="patient-summary-label">Total citas</div>
+    <div class="patient-summary-value">{{ paciente.citas.count }}</div>
+  </div>
+  <div class="patient-summary-card">
+    <div class="patient-summary-label">Evoluciones</div>
+    <div class="patient-summary-value">{{ evoluciones.count }}</div>
+  </div>
+  <div class="patient-summary-card">
+    <div class="patient-summary-label">Imagenología</div>
+    <div class="patient-summary-value">{{ imagenes.count }}</div>
+  </div>
+  <div class="patient-summary-card">
+    <div class="patient-summary-label">Presupuestos</div>
+    <div class="patient-summary-value">{{ presupuestos.count }}</div>
+  </div>
+</div>
+
+<!-- Tabs -->
+<div class="card">
+  <div class="card-header p-0">
+    <div class="patient-tabs-container">
+      <ul class="patient-tabs nav" role="tablist" aria-label="Secciones del paciente">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-resumen" type="button" role="tab" aria-selected="true" aria-controls="tab-resumen"><i class="bi bi-grid" aria-hidden="true"></i> Resumen</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-datos" type="button" role="tab" aria-selected="false" aria-controls="tab-datos"><i class="bi bi-person" aria-hidden="true"></i> Datos</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-citas" type="button" role="tab" aria-selected="false" aria-controls="tab-citas"><i class="bi bi-calendar3" aria-hidden="true"></i> Citas</button></li>
+        {% if not request.user|user_tiene_rol:"recepcionista,administrativo" %}
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-antecedentes" type="button" role="tab" aria-selected="false" aria-controls="tab-antecedentes"><i class="bi bi-heart-pulse" aria-hidden="true"></i> Antecedentes</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-evoluciones" type="button" role="tab" aria-selected="false" aria-controls="tab-evoluciones"><i class="bi bi-journal-medical" aria-hidden="true"></i> Evoluciones</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-odontograma" type="button" role="tab" aria-selected="false" aria-controls="tab-odontograma"><i class="bi bi-file-earmark-medical" aria-hidden="true"></i> Odontograma</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-imagenologia" type="button" role="tab" aria-selected="false" aria-controls="tab-imagenologia"><i class="bi bi-images" aria-hidden="true"></i> Imagenología</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-planes" type="button" role="tab" aria-selected="false" aria-controls="tab-planes"><i class="bi bi-list-check" aria-hidden="true"></i> Planes</button></li>
+        {% endif %}
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-presupuestos" type="button" role="tab" aria-selected="false" aria-controls="tab-presupuestos"><i class="bi bi-receipt" aria-hidden="true"></i> Presupuestos</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-pagos" type="button" role="tab" aria-selected="false" aria-controls="tab-pagos"><i class="bi bi-cash" aria-hidden="true"></i> Pagos</button></li>
+        {% if request.user|user_tiene_rol:"administrador,director,director_clinico" %}
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-auditoria" type="button" role="tab" aria-selected="false" aria-controls="tab-auditoria"><i class="bi bi-shield-lock" aria-hidden="true"></i> Auditoría</button></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="tab-content">
+
+      <!-- RESUMEN -->
+      <div class="tab-pane fade show active" id="tab-resumen" role="tabpanel">
+        <div class="row g-4">
+          <div class="col-lg-7">
+            <h4 class="section-title">Línea de tiempo clínica</h4>
+            <div class="timeline">
+              {% if proxima_cita %}
+              <div class="timeline-item">
+                <div class="timeline-dot cita" aria-hidden="true"></div>
+                <div class="timeline-date">Próxima — {{ proxima_cita.fecha_hora_inicio|date:"d/m/Y H:i" }}</div>
+                <div class="timeline-content">
+                  <div class="timeline-content-title">Cita: {{ proxima_cita.id_tipo_atencion.nombre }}</div>
+                  <div class="timeline-content-sub">Dr(a). {{ proxima_cita.id_odontologo.nombre_completo }} · {{ proxima_cita.id_box.nombre }} · <span class="badge-estado {{ proxima_cita.id_estado_cita.nombre }}" style="font-size:10px;">{{ proxima_cita.id_estado_cita.nombre }}</span></div>
+                </div>
+              </div>
+              {% endif %}
+              {% for evol in evoluciones|slice:":5" %}
+              <div class="timeline-item">
+                <div class="timeline-dot evolucion" aria-hidden="true"></div>
+                <div class="timeline-date">{{ evol.fecha_evolucion|date:"d/m/Y H:i" }}</div>
+                <div class="timeline-content">
+                  <div class="timeline-content-title">Evolución clínica</div>
+                  <div class="timeline-content-sub">Dr(a). {{ evol.id_cita.id_odontologo.nombre_completo }}{% if evol.diagnostico %} — {{ evol.diagnostico|truncatechars:70 }}{% endif %}</div>
+                </div>
+              </div>
+              {% endfor %}
+              {% for pago in pagos|slice:":3" %}
+              <div class="timeline-item">
+                <div class="timeline-dot pago" aria-hidden="true"></div>
+                <div class="timeline-date">{{ pago.fecha_pago|date:"d/m/Y H:i" }}</div>
+                <div class="timeline-content">
+                  <div class="timeline-content-title">Pago registrado — {{ pago.monto|pesos_cl }}</div>
+                  <div class="timeline-content-sub">{{ pago.id_medio_pago.nombre }} · {{ pago.id_presupuesto.numero_presupuesto }} · <span class="badge-estado {{ pago.estado_pago }}" style="font-size:10px;">{{ pago.estado_pago }}</span></div>
+                </div>
+              </div>
+              {% endfor %}
+              {% if not proxima_cita and not evoluciones %}
+              {% include "partials/_empty_state.html" with icon="📋" title="Sin actividad registrada" desc="Este paciente aún no tiene registros clínicos ni citas agendadas." %}
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <h4 class="section-title">Contacto</h4>
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-body" style="font-size:13px;">
+                <div class="mb-2"><strong>Correo:</strong> {{ paciente.id_persona.correo|default:"Sin correo" }}</div>
+                <div class="mb-2"><strong>Teléfono:</strong> {{ paciente.id_persona.telefono|default:"Sin teléfono" }}</div>
+                <div class="mb-2"><strong>Dirección:</strong> {{ paciente.id_persona.direccion|default:"Sin dirección" }}</div>
+                {% if paciente.contacto_emergencia_nombre %}
+                <div class="alert alert-warning mt-2 mb-0" style="font-size:12px;padding:8px 12px;">
+                  <strong>Emergencia:</strong> {{ paciente.contacto_emergencia_nombre }} — {{ paciente.contacto_emergencia_telefono }}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+            {% if tiene_ficha and ficha.observaciones_clinicas_generales %}
+            <div class="alert alert-warning">
+              <i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i>
+              <div><strong>Alerta clínica:</strong> {{ ficha.observaciones_clinicas_generales }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- DATOS -->
+      <div class="tab-pane fade" id="tab-datos" role="tabpanel">
+        <div class="d-flex justify-content-between mb-3">
+          <h4 class="section-title mb-0">Datos administrativos</h4>
+          {% if request.user|user_tiene_rol:"administrador,recepcionista,administrativo" %}
+          <a href="{% url 'pacientes:editar' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-pencil" aria-hidden="true"></i> Editar</a>
+          {% endif %}
+        </div>
+        <div class="row g-3">
+          <div class="col-md-4"><label class="form-label">Nombres</label><p class="fw-600">{{ paciente.id_persona.nombres }}</p></div>
+          <div class="col-md-4"><label class="form-label">Apellidos</label><p class="fw-600">{{ paciente.id_persona.apellido_paterno }} {{ paciente.id_persona.apellido_materno|default:"" }}</p></div>
+          <div class="col-md-4"><label class="form-label">RUT</label><p class="fw-600">{{ paciente.rut|rut_format }}</p></div>
+          <div class="col-md-4"><label class="form-label">Sexo</label><p>{{ paciente.id_persona.id_sexo.nombre|default:"-" }}</p></div>
+          <div class="col-md-4"><label class="form-label">Fecha nacimiento</label><p>{{ paciente.id_persona.fecha_nacimiento|default:"-" }}</p></div>
+          <div class="col-md-4"><label class="form-label">Estado</label><br><span class="badge-estado {{ paciente.id_persona.estado_persona }}">{{ paciente.id_persona.estado_persona }}</span></div>
+          <div class="col-md-4"><label class="form-label">Teléfono</label><p>{{ paciente.id_persona.telefono|default:"-" }}</p></div>
+          <div class="col-md-4"><label class="form-label">Correo</label><p>{{ paciente.id_persona.correo|default:"-" }}</p></div>
+          <div class="col-md-4"><label class="form-label">Ciudad</label><p>{{ paciente.id_persona.ciudad|default:"-" }}</p></div>
+        </div>
+      </div>
+
+      <!-- CITAS -->
+      <div class="tab-pane fade" id="tab-citas" role="tabpanel">
+        <div class="table-wrapper">
+          <table class="alba-table" aria-label="Historial de citas del paciente">
+            <thead><tr><th>Fecha</th><th>Odontólogo</th><th>Tipo</th><th>Box</th><th>Estado</th><th class="text-end"></th></tr></thead>
+            <tbody>
+              {% for cita in paciente.citas.all %}
+              <tr>
+                <td data-label="Fecha">{{ cita.fecha_hora_inicio|date:"d/m/Y H:i" }}</td>
+                <td data-label="Odontólogo">{{ cita.id_odontologo.nombre_completo }}</td>
+                <td data-label="Tipo" style="font-size:12px;">{{ cita.id_tipo_atencion.nombre }}</td>
+                <td data-label="Box" style="font-size:12px;">{{ cita.id_box.nombre }}</td>
+                <td data-label="Estado"><span class="badge-estado {{ cita.id_estado_cita.nombre }}">{{ cita.id_estado_cita.nombre }}</span></td>
+                <td class="text-end"><a href="{% url 'agenda:detalle_cita' cita.id_cita %}" class="btn btn-outline btn-sm"><i class="bi bi-eye" aria-hidden="true"></i></a></td>
+              </tr>
+              {% empty %}<tr><td colspan="6">{% include "partials/_empty_state.html" with icon="📅" title="Sin citas" desc="Este paciente no tiene citas registradas." cta_url="/agenda/crear/" cta_label="Agendar cita" %}</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ANTECEDENTES -->
+      <div class="tab-pane fade" id="tab-antecedentes" role="tabpanel">
+        <div class="d-flex justify-content-between mb-3">
+          <h4 class="section-title mb-0">Antecedentes médicos</h4>
+          <a href="{% url 'antecedentes:lista' paciente.id_paciente %}" class="btn btn-outline btn-sm">Gestionar antecedentes</a>
+        </div>
+        {% if tiene_ficha and ficha.observaciones_clinicas_generales %}
+        <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><div>{{ ficha.observaciones_clinicas_generales }}</div></div>
+        {% else %}
+        {% include "partials/_empty_state.html" with icon="🩺" title="Sin alertas clínicas" desc="No hay antecedentes críticos registrados en la ficha clínica." %}
+        {% endif %}
+      </div>
+
+      <!-- EVOLUCIONES -->
+      <div class="tab-pane fade" id="tab-evoluciones" role="tabpanel">
+        {% for evol in evoluciones %}
+        <div class="clinical-list-item">
+          <div class="flex-grow-1">
+            <div class="fw-600">{{ evol.fecha_evolucion|date:"d/m/Y H:i" }}</div>
+            <div style="font-size:12px;color:var(--color-texto-suave);">Dr(a). {{ evol.id_cita.id_odontologo.nombre_completo }}</div>
+            {% if evol.diagnostico %}<div style="font-size:13px;margin-top:4px;">{{ evol.diagnostico|truncatechars:180 }}</div>{% endif %}
+          </div>
+          <div class="d-flex gap-2">
+            <a href="{% url 'fichas:modo_atencion' evol.id_cita_id %}" class="btn btn-clinical btn-sm">Atención</a>
+            <a href="{% url 'fichas:evolucion_detalle' evol.id_evolucion %}" class="btn btn-outline btn-sm">Ver</a>
+          </div>
+        </div>
+        {% empty %}
+        {% include "partials/_empty_state.html" with icon="📝" title="Sin evoluciones" desc="Este paciente aún no tiene evoluciones clínicas registradas. Aparecerán aquí cuando el odontólogo registre la primera atención." cta_url="" cta_label="" %}
+        {% endfor %}
+      </div>
+
+      <!-- ODONTOGRAMA -->
+      <div class="tab-pane fade" id="tab-odontograma" role="tabpanel">
+        <div class="d-flex justify-content-between mb-3">
+          <h4 class="section-title mb-0">Odontogramas</h4>
+          {% if tiene_ficha %}<a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo</a>{% endif %}
+        </div>
+        {% for od in odontogramas %}
+        <div class="clinical-list-item">
+          <div><strong>Versión {{ od.version }}</strong><div style="font-size:12px;color:var(--color-texto-suave);">{{ od.fecha_registro|date:"d/m/Y H:i" }} · {{ od.id_odontologo.nombre_completo|default:"Sin odontólogo" }}</div></div>
+          <a href="{% url 'odontograma:detalle' od.id_odontograma %}" class="btn btn-outline btn-sm">Abrir</a>
+        </div>
+        {% empty %}
+        {% include "partials/_empty_state.html" with icon="🦷" title="Sin odontogramas" desc="No hay registros odontológicos para este paciente." %}
+        {% endfor %}
+      </div>
+
+      <!-- IMAGENOLOGÍA -->
+      <div class="tab-pane fade" id="tab-imagenologia" role="tabpanel">
+        <div class="d-flex justify-content-between mb-3">
+          <h4 class="section-title mb-0">Imagenología</h4>
+          <a href="{% url 'imagenologia:crear' paciente.id_paciente %}" class="btn btn-primary btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Subir examen</a>
+        </div>
+        {% for examen in imagenes %}
+        <div class="clinical-list-item">
+          <div><strong>{{ examen.tipo_examen.nombre }}</strong><div style="font-size:12px;color:var(--color-texto-suave);">{{ examen.fecha_examen|date:"d/m/Y" }} · {{ examen.archivos.count }} archivo(s)</div></div>
+          <a href="{% url 'imagenologia:detalle' examen.id_examen %}" class="btn btn-outline btn-sm">Ver</a>
+        </div>
+        {% empty %}
+        {% include "partials/_empty_state.html" with icon="🩻" title="Sin exámenes" desc="No hay exámenes imagenológicos cargados para este paciente." %}
+        {% endfor %}
+      </div>
+
+      <!-- PLANES -->
+      <div class="tab-pane fade" id="tab-planes" role="tabpanel">
+        <div class="d-flex justify-content-between mb-3">
+          <h4 class="section-title mb-0">Planes de tratamiento</h4>
+          {% if tiene_ficha and request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}<a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo plan</a>{% endif %}
+        </div>
+        {% for plan in planes %}
+        <div class="clinical-list-item">
+          <div><strong>Plan #{{ plan.id_plan_tratamiento }}</strong><div style="font-size:12px;color:var(--color-texto-suave);">{{ plan.fecha_creacion|date:"d/m/Y" }} · Total est. {{ plan.total_estimado|pesos_cl }}</div></div>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="badge-estado {{ plan.estado_plan }}">{{ plan.estado_plan }}</span>
+            <a href="{% url 'tratamientos:plan_detalle' plan.id_plan_tratamiento %}" class="btn btn-outline btn-sm">Ver</a>
+          </div>
+        </div>
+        {% empty %}
+        {% include "partials/_empty_state.html" with icon="📋" title="Sin planes" desc="No hay planes de tratamiento asociados a este paciente." %}
+        {% endfor %}
+      </div>
+
+      <!-- PRESUPUESTOS -->
+      <div class="tab-pane fade" id="tab-presupuestos" role="tabpanel">
+        {% for pres in presupuestos %}
+        <div class="clinical-list-item">
+          <div><strong>{{ pres.numero_presupuesto }}</strong><div style="font-size:12px;color:var(--color-texto-suave);">Total {{ pres.monto_final|pesos_cl }} · Saldo {{ pres.saldo_pendiente|pesos_cl }}</div></div>
+          <div class="d-flex gap-2 align-items-center">
+            <span class="badge-estado {{ pres.estado_presupuesto }}">{{ pres.estado_presupuesto }}</span>
+            <a href="{% url 'presupuestos:detalle' pres.id_presupuesto %}" class="btn btn-outline btn-sm">Ver</a>
+          </div>
+        </div>
+        {% empty %}
+        {% include "partials/_empty_state.html" with icon="🧾" title="Sin presupuestos" desc="No hay presupuestos asociados a este paciente." %}
+        {% endfor %}
+      </div>
+
+      <!-- PAGOS -->
+      <div class="tab-pane fade" id="tab-pagos" role="tabpanel">
+        <div class="table-wrapper">
+          <table class="alba-table" aria-label="Historial de pagos del paciente">
+            <thead><tr><th>Fecha</th><th>Presupuesto</th><th>Medio</th><th>Monto</th><th>Estado</th></tr></thead>
+            <tbody>
+              {% for pago in pagos %}
+              <tr>
+                <td data-label="Fecha">{{ pago.fecha_pago|date:"d/m/Y H:i" }}</td>
+                <td data-label="Presupuesto" style="font-size:12px;">{{ pago.id_presupuesto.numero_presupuesto }}</td>
+                <td data-label="Medio" style="font-size:12px;">{{ pago.id_medio_pago.nombre }}</td>
+                <td data-label="Monto"><strong>{{ pago.monto|pesos_cl }}</strong></td>
+                <td data-label="Estado"><span class="badge-estado {{ pago.estado_pago }}">{{ pago.estado_pago }}</span></td>
+              </tr>
+              {% empty %}<tr><td colspan="5">{% include "partials/_empty_state.html" with icon="💳" title="Sin pagos" desc="No hay pagos registrados para este paciente." %}</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- AUDITORÍA -->
+      <div class="tab-pane fade" id="tab-auditoria" role="tabpanel">
+        {% for evento in auditoria %}
+        <div class="clinical-list-item">
+          <div><strong>{{ evento.accion }}</strong> <span style="color:var(--color-texto-suave);">en {{ evento.modulo }}</span><div style="font-size:12px;color:var(--color-texto-suave);">{{ evento.fecha_evento|date:"d/m/Y H:i" }} · {{ evento.id_usuario.nombre_completo }}</div></div>
+          <span style="font-size:11px;color:var(--color-texto-muy-suave);">{{ evento.ip_origen|default:"" }}</span>
+        </div>
+        {% empty %}
+        {% include "partials/_empty_state.html" with icon="🔒" title="Sin eventos de auditoría" desc="No hay eventos registrados en bitácora para este paciente." %}
+        {% endfor %}
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

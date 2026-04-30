@@ -1,0 +1,55 @@
+<!-- templates/antecedentes/lista.html -->
+{% extends 'base.html' %}
+{% block title %}Antecedentes — {{ paciente.nombre_completo }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Antecedentes médicos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Antecedentes médicos</h1>
+    <p class="page-subtitle">{{ paciente.nombre_completo }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'antecedentes:registrar' paciente.id_paciente %}" class="btn btn-primary"><i class="bi bi-plus"></i> Registrar antecedentes</a>
+    <a href="{% url 'pacientes:detalle' paciente.id_paciente %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+  </div>
+</div>
+
+{% for registro in registros %}
+<div class="card mb-4">
+  <div class="card-header">
+    <h2 class="card-title"><i class="bi bi-heart-pulse me-2"></i>Registro {{ registro.fecha_registro|date:"d/m/Y H:i" }}</h2>
+    <span style="font-size:12px;color:var(--color-texto-suave);">por {{ registro.id_usuario_registra.nombre_completo }}</span>
+  </div>
+  <div class="card-body">
+    {% if registro.observaciones_generales %}
+    <div class="alert alert-info mb-3">{{ registro.observaciones_generales }}</div>
+    {% endif %}
+    <div class="row g-2">
+      {% for det in registro.detalles.all %}
+      <div class="col-md-6">
+        <div class="d-flex align-items-start gap-2 p-2" style="background:var(--color-bg);border-radius:var(--radius-sm);border:1px solid var(--color-borde);">
+          <span style="width:8px;height:8px;background:var(--color-acento);border-radius:50%;margin-top:5px;flex-shrink:0;"></span>
+          <div>
+            <div style="font-weight:600;font-size:13px;">{{ det.id_catalogo_antecedente.nombre }}</div>
+            <div style="font-size:11px;color:var(--color-texto-suave);">{{ det.id_catalogo_antecedente.get_tipo_antecedente_display }}</div>
+            {% if det.detalle_adicional %}
+            <div style="font-size:12px;color:var(--color-texto-suave);font-style:italic;">{{ det.detalle_adicional }}</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12" style="color:var(--color-texto-muy-suave);font-size:13px;">Sin antecedentes específicos registrados.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% empty %}
+<div class="empty-state" style="padding:64px;">
+  <div class="empty-state-icon">💊</div>
+  <div class="empty-state-title">Sin antecedentes registrados</div>
+  <a href="{% url 'antecedentes:registrar' paciente.id_paciente %}" class="btn btn-primary mt-3">Registrar antecedentes</a>
+</div>
+{% endfor %}
+{% endblock %}

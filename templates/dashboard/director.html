@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% load core_tags humanize %}
+
+{% block title %}Dashboard Director Clinico - {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Direccion Clinica{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Vista general de direccion</h1>
+    <p class="page-subtitle">Indicadores clinicos, financieros y trazabilidad del dia</p>
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card kpi-celeste">
+    <div class="kpi-icon"><i class="bi bi-people" style="color:#0369a1;"></i></div>
+    <div class="kpi-value fs-3">{{ citas_hoy }}</div>
+    <div class="kpi-label">Citas del dia</div>
+  </div>
+  <div class="kpi-card kpi-menta">
+    <div class="kpi-icon"><i class="bi bi-cash" style="color:#065f46;"></i></div>
+    <div class="kpi-value fs-3">{{ pagos_hoy|pesos_cl }}</div>
+    <div class="kpi-label">Recaudacion</div>
+  </div>
+  <div class="kpi-card kpi-lavanda">
+    <div class="kpi-icon"><i class="bi bi-check2-circle" style="color:#5b21b6;"></i></div>
+    <div class="kpi-value fs-3">{{ presupuestos_aceptados }}</div>
+    <div class="kpi-label">Pptos. aceptados</div>
+  </div>
+</div>
+
+<div class="row g-4 mt-2">
+  <div class="col-md-4">
+    <a href="{% url 'agenda:calendario' %}" class="card text-decoration-none h-100">
+      <div class="card-body">
+        <h2 class="card-title"><i class="bi bi-calendar3 me-2"></i>Supervisar agenda</h2>
+        <p class="text-muted small mb-0">Revisar atenciones, estados y disponibilidad por box.</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'auditoria:lista' %}" class="card text-decoration-none h-100">
+      <div class="card-body">
+        <h2 class="card-title"><i class="bi bi-shield-lock me-2"></i>Auditoria clinica</h2>
+        <p class="text-muted small mb-0">Consultar eventos sensibles, accesos y cambios clinicos.</p>
+      </div>
+    </a>
+  </div>
+  <div class="col-md-4">
+    <a href="{% url 'presupuestos:lista' %}" class="card text-decoration-none h-100">
+      <div class="card-body">
+        <h2 class="card-title"><i class="bi bi-receipt me-2"></i>Presupuestos</h2>
+        <p class="text-muted small mb-0">Ver aceptaciones, rechazos, pagos parciales y saldos.</p>
+      </div>
+    </a>
+  </div>
+</div>
+{% endblock %}

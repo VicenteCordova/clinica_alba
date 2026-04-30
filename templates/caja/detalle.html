@@ -1,0 +1,144 @@
+<!-- templates/caja/detalle.html -->
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Caja #{{ caja.id_caja }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Detalle de caja{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Caja #{{ caja.id_caja }}</h1>
+    <p class="page-subtitle">Apertura: {{ caja.fecha_apertura|date:"d/m/Y H:i" }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'caja:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+    {% if caja.estado_caja == 'abierta' %}
+    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#modalCerrar">
+      <i class="bi bi-lock"></i> Cerrar caja
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<!-- KPIs de caja -->
+<div class="kpi-grid mb-4" style="grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));">
+  <div class="kpi-card kpi-menta">
+    <div class="kpi-icon"><i class="bi bi-cash" style="color:#065f46;"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ caja.monto_inicial|pesos_cl }}</div>
+    <div class="kpi-label">Monto inicial</div>
+  </div>
+  <div class="kpi-card kpi-celeste">
+    <div class="kpi-icon"><i class="bi bi-arrow-up-circle" style="color:#0369a1;"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ caja.total_ingresos|pesos_cl }}</div>
+    <div class="kpi-label">Total ingresos</div>
+  </div>
+  <div class="kpi-card kpi-rosa">
+    <div class="kpi-icon"><i class="bi bi-arrow-down-circle" style="color:#9d174d;"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ caja.total_egresos|pesos_cl }}</div>
+    <div class="kpi-label">Total egresos</div>
+  </div>
+  <div class="kpi-card kpi-lavanda">
+    <div class="kpi-icon"><i class="bi bi-wallet2" style="color:#5b21b6;"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ caja.saldo_calculado|pesos_cl }}</div>
+    <div class="kpi-label">Saldo calculado</div>
+  </div>
+  <div class="kpi-card {% if caja.estado_caja == 'abierta' %}kpi-menta{% else %}kpi-amarillo{% endif %}">
+    <div class="kpi-icon"><i class="bi bi-box" style="color:#92400e;"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ caja.get_estado_caja_display }}</div>
+    <div class="kpi-label">Estado</div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Registrar movimiento -->
+  {% if caja.estado_caja == 'abierta' %}
+  <div class="col-lg-4">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-plus-circle me-2"></i>Nuevo movimiento</h2></div>
+      <div class="card-body">
+        <form method="post" action="{% url 'caja:movimiento' caja.id_caja %}">
+          {% csrf_token %}
+          <div class="form-group">
+            <label class="form-label">Tipo</label>
+            {{ mov_form.id_tipo_movimiento }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Monto ($)</label>
+            {{ mov_form.monto }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Descripción</label>
+            {{ mov_form.descripcion }}
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-check-lg"></i> Registrar movimiento
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Movimientos -->
+  <div class="{% if caja.estado_caja == 'abierta' %}col-lg-8{% else %}col-12{% endif %}">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-list-ul me-2"></i>Movimientos ({{ movimientos.count }})</h2></div>
+      <div class="table-wrapper" style="border:none;border-radius:0;">
+        <table class="alba-table">
+          <thead><tr><th>Hora</th><th>Tipo</th><th>Descripción</th><th>Monto</th><th>Usuario</th></tr></thead>
+          <tbody>
+            {% for mov in movimientos %}
+            <tr>
+              <td>{{ mov.fecha_movimiento|date:"H:i" }}</td>
+              <td>
+                <span class="badge-estado {% if mov.id_tipo_movimiento.nombre == 'ingreso' %}activo{% else %}cancelada{% endif %}">
+                  {{ mov.id_tipo_movimiento.nombre }}
+                </span>
+              </td>
+              <td style="font-size:13px;">{{ mov.descripcion|default:"—" }}</td>
+              <td style="font-weight:700;{% if mov.id_tipo_movimiento.nombre == 'ingreso' %}color:#065f46;{% else %}color:#991b1b;{% endif %}">
+                {% if mov.id_tipo_movimiento.nombre != 'ingreso' %}−{% endif %}{{ mov.monto|pesos_cl }}
+              </td>
+              <td style="font-size:12px;color:var(--color-texto-suave);">{{ mov.id_usuario_registra.nombre_completo }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5"><div class="empty-state" style="padding:24px;"><div class="empty-state-icon">💸</div><div class="empty-state-title">Sin movimientos</div></div></td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Cerrar Caja -->
+{% if caja.estado_caja == 'abierta' %}
+<div class="modal fade" id="modalCerrar" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content" style="border-radius:var(--radius);border:none;">
+      <div class="modal-header" style="border-bottom:1px solid var(--color-borde);">
+        <h5 class="modal-title" style="font-weight:700;"><i class="bi bi-lock me-2"></i>Cerrar caja</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="post" action="{% url 'caja:cerrar' caja.id_caja %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <div class="alert alert-info mb-3">
+            Saldo calculado: <strong>{{ caja.saldo_calculado|pesos_cl }}</strong>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Monto arqueo (efectivo contado)</label>
+            {{ cerrar_form.monto_final }}
+            <div class="form-text">Ingresa el efectivo real que queda en caja al cierre.</div>
+          </div>
+        </div>
+        <div class="modal-footer" style="border-top:1px solid var(--color-borde);">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger"><i class="bi bi-lock"></i> Confirmar cierre</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

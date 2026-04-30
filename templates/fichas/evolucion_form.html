@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% block title %}{% if editar %}Editar evolucion{% else %}Nueva evolucion{% endif %} - {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}{% if editar %}Editar evolucion{% else %}Nueva evolucion clinica{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{% if editar %}Editar evolucion #{{ evolucion.id_evolucion }}{% else %}Nueva evolucion{% endif %}</h1>
+    <p class="page-subtitle">Cita #{{ cita.id_cita }} - {{ cita.fecha_hora_inicio|date:"d/m/Y H:i" }}</p>
+  </div>
+  <a href="{% url 'fichas:modo_atencion' cita.id_cita %}" class="btn btn-primary">
+    <i class="bi bi-door-open"></i> Modo atencion
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-clipboard2-pulse me-2"></i>Registro clinico</h2></div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Motivo de consulta</label>
+              <textarea name="motivo_consulta" class="form-control" rows="3">{{ evolucion.motivo_consulta|default:cita.motivo_consulta }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Anamnesis</label>
+              <textarea name="anamnesis" class="form-control" rows="3">{{ evolucion.anamnesis|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Diagnostico clinico</label>
+              <textarea name="diagnostico" class="form-control" rows="4">{{ evolucion.diagnostico|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Procedimiento realizado</label>
+              <textarea name="procedimiento_realizado" class="form-control" rows="4">{{ evolucion.procedimiento_realizado|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Indicaciones</label>
+              <textarea name="indicaciones" class="form-control" rows="3">{{ evolucion.indicaciones|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Tratamiento sugerido</label>
+              <textarea name="tratamiento_sugerido" class="form-control" rows="3">{{ evolucion.tratamiento_sugerido|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Proxima accion o control</label>
+              <textarea name="proxima_accion" class="form-control" rows="3">{{ evolucion.proxima_accion|default:"" }}</textarea>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Observaciones adicionales</label>
+              <textarea name="observaciones" class="form-control" rows="3">{{ evolucion.observaciones|default:"" }}</textarea>
+            </div>
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-check-lg"></i> {% if editar %}Actualizar{% else %}Guardar evolucion{% endif %}
+            </button>
+            {% if editar %}
+            <a href="{% url 'fichas:evolucion_detalle' evolucion.id_evolucion %}" class="btn btn-outline">Cancelar</a>
+            {% else %}
+            <a href="{% url 'agenda:detalle_cita' cita.id_cita %}" class="btn btn-outline">Cancelar</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card" style="background:var(--color-celeste);border:none;">
+      <div class="card-body">
+        <div style="font-weight:700;margin-bottom:10px;"><i class="bi bi-person me-1"></i>Paciente</div>
+        <div style="font-size:14px;font-weight:600;">{{ cita.id_paciente.nombre_completo }}</div>
+        <div style="font-size:12px;color:var(--color-texto-suave);">{{ cita.id_paciente.rut }}</div>
+        <hr style="border-color:rgba(0,0,0,.08);">
+        <div style="font-weight:700;margin-bottom:6px;"><i class="bi bi-person-badge me-1"></i>Odontologo</div>
+        <div style="font-size:13px;">Dr(a). {{ cita.id_odontologo.nombre_completo }}</div>
+        <hr style="border-color:rgba(0,0,0,.08);">
+        <div style="font-size:12px;color:var(--color-texto-suave);">
+          <i class="bi bi-clock me-1"></i>{{ cita.fecha_hora_inicio|date:"H:i" }} - {{ cita.fecha_hora_fin|date:"H:i" }}<br>
+          <i class="bi bi-geo-alt me-1"></i>{{ cita.id_box.nombre }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

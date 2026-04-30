@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load core_tags humanize %}
+
+{% block title %}Dashboard Caja — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Caja y Pagos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Módulo de Caja</h1>
+    <p class="page-subtitle">{% now "l, d \d\e F \d\e Y" %}</p>
+  </div>
+  <div>
+    {% if caja %}
+    <span class="badge bg-success p-2 fs-6"><i class="bi bi-unlock-fill me-1"></i> Caja Abierta</span>
+    <a href="{% url 'caja:cerrar' %}" class="btn btn-outline-danger ms-2"><i class="bi bi-lock-fill"></i> Cerrar Caja</a>
+    {% else %}
+    <span class="badge bg-danger p-2 fs-6"><i class="bi bi-lock-fill me-1"></i> Caja Cerrada</span>
+    <a href="{% url 'caja:abrir' %}" class="btn btn-primary ms-2"><i class="bi bi-unlock-fill"></i> Abrir Caja</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card kpi-amarillo">
+    <div class="kpi-icon"><i class="bi bi-cash-stack" style="color:#92400e;"></i></div>
+    <div class="kpi-value fs-4">{{ ingresos_dia|pesos_cl }}</div>
+    <div class="kpi-label">Ingresos del día</div>
+  </div>
+  <div class="kpi-card kpi-rosa">
+    <div class="kpi-icon"><i class="bi bi-receipt" style="color:#9d174d;"></i></div>
+    <div class="kpi-value fs-4">{{ presupuestos_pendientes.count }}</div>
+    <div class="kpi-label">Presupuestos aceptados pdt.</div>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h2 class="card-title">Pagos Registrados Hoy</h2>
+        {% if caja %}
+        <a href="{% url 'pagos:crear' %}" class="btn btn-sm btn-primary">Registrar Pago Manual</a>
+        {% endif %}
+      </div>
+      <div class="card-body p-0">
+        <table class="alba-table">
+          <thead>
+            <tr>
+              <th>Hora</th>
+              <th>Presupuesto</th>
+              <th>Monto</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pago in pagos %}
+            <tr>
+              <td>{{ pago.fecha_pago|date:"H:i" }}</td>
+              <td>
+                <a href="{% url 'presupuestos:detalle' pago.id_presupuesto_id %}" class="text-decoration-none">
+                  {{ pago.id_presupuesto.numero_presupuesto }}
+                </a>
+              </td>
+              <td><strong>{{ pago.monto|pesos_cl }}</strong></td>
+              <td><span class="badge bg-success">{{ pago.get_estado_pago_display }}</span></td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted p-4">No hay pagos registrados hoy.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

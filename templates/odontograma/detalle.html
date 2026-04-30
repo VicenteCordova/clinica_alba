@@ -1,0 +1,356 @@
+﻿{% extends 'base.html' %}
+{% load core_tags humanize static %}
+{% block title %}Odontograma v{{ odontograma.version }} — {{ paciente.nombre_completo }}{% endblock %}
+{% block topbar_title %}Odontograma Interactivo{% endblock %}
+{% block breadcrumb %}<a href="{% url 'dashboard:index' %}">Inicio</a><span class="breadcrumb-sep">/</span><a href="{% url 'pacientes:detalle' paciente.id_paciente %}">{{ paciente.nombre_completo|truncatechars:20 }}</a><span class="breadcrumb-sep">/</span>Odontograma{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'css/odontograma_v2.css' %}">{% endblock %}
+{% block content %}
+
+<!-- Header del odontograma -->
+<div class="odontograma-header-bar mb-3">
+  <div>
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--color-acento);margin-bottom:3px;">Odontograma v{{ odontograma.version }}</div>
+    <div class="odontograma-patient-name">{{ paciente.nombre_completo }}</div>
+    <div class="odontograma-patient-meta">
+      {{ paciente.rut|rut_format }}
+      {% if paciente.id_persona.fecha_nacimiento %} · {{ paciente.id_persona.fecha_nacimiento|edad }} años{% endif %}
+      {% if odontograma.id_evolucion %} · Evolución #{{ odontograma.id_evolucion_id }}{% endif %}
+      · Dr(a). {{ odontograma.id_odontologo.nombre_completo|default:"Sin asignar" }}
+      · <span class="badge-estado {{ odontograma.estado_odontograma }}" style="font-size:10px;">{{ odontograma.estado_odontograma }}</span>
+    </div>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <button class="btn btn-outline btn-sm" onclick="window.print()" aria-label="Imprimir odontograma"><i class="bi bi-printer" aria-hidden="true"></i> Imprimir</button>
+    <a href="{% url 'pacientes:detalle' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-person" aria-hidden="true"></i> Paciente</a>
+    {% if odontograma.id_evolucion %}
+    <a href="{% url 'fichas:modo_atencion' odontograma.id_evolucion.id_cita_id %}" class="btn btn-clinical btn-sm"><i class="bi bi-play-circle" aria-hidden="true"></i> Atención</a>
+    {% endif %}
+    <button id="btn-save-odontograma" class="btn btn-clinical btn-sm"><i class="bi bi-save" aria-hidden="true"></i> Guardar</button>
+  </div>
+</div>
+
+<!-- Filtros -->
+<div class="odontograma-filter-bar mb-3" role="group" aria-label="Filtrar vista del odontograma">
+  <button class="filter-pill active" data-filter="todos" aria-pressed="true"><i class="bi bi-grid" aria-hidden="true"></i> Todos</button>
+  <button class="filter-pill" data-filter="condicion" aria-pressed="false"><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Condiciones</button>
+  <button class="filter-pill" data-filter="existente" aria-pressed="false"><i class="bi bi-archive" aria-hidden="true"></i> Existentes</button>
+  <button class="filter-pill" data-filter="planificado" aria-pressed="false"><i class="bi bi-calendar-check" aria-hidden="true"></i> Planificados</button>
+  <button class="filter-pill" data-filter="completado" aria-pressed="false"><i class="bi bi-check-circle" aria-hidden="true"></i> Completados</button>
+</div>
+
+<!-- Cuerpo principal -->
+<div class="odontograma-layout">
+
+  <!-- Canvas SVG -->
+  <div class="odontograma-canvas-area" id="odontograma-canvas" role="application" aria-label="Odontograma interactivo. Use Enter o clic para seleccionar una pieza dental.">
+
+    <!-- Descripción para lectores de pantalla -->
+    <p class="visually-hidden">Odontograma interactivo del paciente {{ paciente.nombre_completo }}. Seleccione una pieza dental para ver su estado y registrar condiciones o tratamientos.</p>
+
+    <!-- SVG del odontograma -->
+    <svg id="odontograma-svg" viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg"
+         role="img" aria-label="Diagrama dental con arcadas superior e inferior"
+         style="width:100%;max-width:900px;display:block;margin:0 auto;">
+
+      <!-- Etiqueta arcada superior -->
+      <text x="400" y="22" class="arch-label">Arcada Superior</text>
+      <!-- Etiqueta arcada inferior -->
+      <text x="400" y="370" class="arch-label">Arcada Inferior</text>
+      <!-- Línea separadora central -->
+      <line x1="400" y1="30" x2="400" y2="350" class="arch-separator"/>
+
+      <!-- Cuadrante 1 (Superior Derecho, FDI 11-18) -->
+      <text x="200" y="38" class="quadrant-label" text-anchor="middle">I</text>
+      <!-- Cuadrante 2 (Superior Izquierdo, FDI 21-28) -->
+      <text x="600" y="38" class="quadrant-label" text-anchor="middle">II</text>
+      <!-- Cuadrante 3 (Inferior Izquierdo, FDI 31-38) -->
+      <text x="600" y="350" class="quadrant-label" text-anchor="middle">III</text>
+      <!-- Cuadrante 4 (Inferior Derecho, FDI 41-48) -->
+      <text x="200" y="350" class="quadrant-label" text-anchor="middle">IV</text>
+
+    </svg>
+
+    <!-- Tooltip flotante accesible -->
+    <div class="tooth-tooltip" id="tooth-tooltip" role="tooltip" aria-live="polite">
+      <div class="tooth-tooltip-title" id="tooltip-title"></div>
+      <div class="tooth-tooltip-estado" id="tooltip-estado"></div>
+      <div id="tooltip-condicion"></div>
+    </div>
+  </div>
+
+  <!-- Panel derecho -->
+  <div class="odontograma-right-panel">
+
+    <!-- Leyenda WCAG-compliant -->
+    <div class="odontograma-legend-card">
+      <div class="odontograma-legend-title">Leyenda de estados</div>
+      <div class="legend-row legend-sano">
+        <div class="legend-swatch" aria-hidden="true"></div>
+        <span class="legend-icon" aria-hidden="true">⬜</span>
+        <span class="legend-label">Sano / Sin registro</span>
+      </div>
+      <div class="legend-row legend-existente">
+        <div class="legend-swatch" aria-hidden="true"></div>
+        <span class="legend-icon" aria-hidden="true">🔵</span>
+        <span class="legend-label">Existente</span>
+      </div>
+      <div class="legend-row legend-condicion">
+        <div class="legend-swatch" aria-hidden="true"></div>
+        <span class="legend-icon" aria-hidden="true">🔴</span>
+        <span class="legend-label">Condición detectada</span>
+      </div>
+      <div class="legend-row legend-planificado">
+        <div class="legend-swatch" aria-hidden="true"></div>
+        <span class="legend-icon" aria-hidden="true">📅</span>
+        <span class="legend-label">Planificado</span>
+      </div>
+      <div class="legend-row legend-completado">
+        <div class="legend-swatch" aria-hidden="true"></div>
+        <span class="legend-icon" aria-hidden="true">✅</span>
+        <span class="legend-label">Completado</span>
+      </div>
+      <div class="legend-row legend-ausente">
+        <div class="legend-swatch" aria-hidden="true"></div>
+        <span class="legend-icon" aria-hidden="true">⬛</span>
+        <span class="legend-label">Ausente / Extraído</span>
+      </div>
+      <div class="legend-row legend-urgente">
+        <div class="legend-swatch" aria-hidden="true"></div>
+        <span class="legend-icon" aria-hidden="true">⚠️</span>
+        <span class="legend-label">Urgencia</span>
+      </div>
+    </div>
+
+    <!-- Panel de registro -->
+    <div class="odontograma-registro-panel">
+      <div class="registro-panel-header">
+        <div class="registro-panel-header-title"><i class="bi bi-pencil-square me-2" aria-hidden="true"></i>Registrar condición</div>
+      </div>
+      <div class="registro-panel-body">
+
+        <div id="panel-no-selection" style="font-size:13px;color:var(--color-texto-suave);text-align:center;padding:20px 0;">
+          <div style="font-size:32px;margin-bottom:8px;">🦷</div>
+          Selecciona una pieza dental en el diagrama para registrar una condición o tratamiento.
+        </div>
+
+        <div id="panel-selection" style="display:none;">
+          <div class="pieza-selected-badge" id="pieza-badge">
+            <i class="bi bi-geo-alt" aria-hidden="true"></i>
+            <span id="pieza-selected-label">—</span>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="cara-select">Cara dental</label>
+            <select class="form-select" id="cara-select" aria-label="Seleccionar cara dental">
+              <option value="">— General / toda la pieza —</option>
+              <option value="vestibular">Vestibular</option>
+              <option value="lingual">Lingual / Palatina</option>
+              <option value="mesial">Mesial</option>
+              <option value="distal">Distal</option>
+              <option value="oclusal">Oclusal / Incisal</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Estado clínico</label>
+            <div class="state-selector-group" role="group" aria-label="Seleccionar estado clínico">
+              <button class="state-btn condicion"   data-state="condicion"   aria-pressed="false">🔴 Condición</button>
+              <button class="state-btn existente"   data-state="existente"   aria-pressed="false">🔵 Existente</button>
+              <button class="state-btn planificado" data-state="planificado" aria-pressed="false">📅 Planificado</button>
+              <button class="state-btn completado"  data-state="completado"  aria-pressed="false">✅ Completado</button>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="condicion-search">Condición / Tratamiento</label>
+            <input type="search" id="condicion-search" class="form-control condition-search" placeholder="Buscar: caries, corona, sellante..." aria-label="Buscar condición o tratamiento" autocomplete="off">
+            <div class="condition-list mt-1" id="condition-list" role="listbox" aria-label="Lista de condiciones">
+              {% for condicion in condiciones %}
+              <div class="condition-item" data-id="{{ condicion.id_condicion }}" data-name="{{ condicion.nombre }}" role="option" tabindex="0" aria-selected="false">
+                <div class="condition-item-icon" style="background:var(--color-acento);" aria-hidden="true"></div>
+                {{ condicion.nombre }}
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="observacion-field">Observación clínica</label>
+            <textarea id="observacion-field" class="form-control" rows="2" placeholder="Observación opcional..."></textarea>
+          </div>
+
+          <div class="d-grid gap-2">
+            <button class="btn btn-clinical btn-sm" id="btn-guardar-registro">
+              <i class="bi bi-save" aria-hidden="true"></i> Guardar registro
+            </button>
+            <button class="btn btn-ghost btn-sm" id="btn-limpiar-seleccion">
+              <i class="bi bi-x-circle" aria-hidden="true"></i> Limpiar selección
+            </button>
+            <button class="btn btn-outline btn-sm" id="btn-enviar-plan" style="display:none;">
+              <i class="bi bi-list-check" aria-hidden="true"></i> Enviar a plan de tratamiento
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Tabla historial inferior -->
+<div class="odontograma-history-table">
+  <div class="odontograma-history-header">
+    <div class="odontograma-history-title"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>Historial odontológico</div>
+    <div class="odontograma-history-filters">
+      <input type="search" placeholder="Buscar..." class="history-filter-input" id="history-search" aria-label="Buscar en el historial odontológico" style="width:160px;">
+    </div>
+  </div>
+  <div class="table-wrapper" style="border:none;border-radius:0;">
+    <table class="alba-table alba-table-compact" id="history-table" aria-label="Historial de registros odontológicos">
+      <thead>
+        <tr>
+          <th>Fecha</th><th>Pieza</th><th>Cara</th><th>Condición</th><th>Estado</th><th>Profesional</th><th>Observación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for detalle in odontograma.detalles.all %}
+        <tr>
+          <td data-label="Fecha">{{ odontograma.fecha_registro|date:"d/m/Y" }}</td>
+          <td data-label="Pieza"><span class="badge-estado activa" style="font-size:11px;">{{ detalle.codigo_pieza_dental_id }}</span></td>
+          <td data-label="Cara" style="font-size:12px;">{{ detalle.id_cara_dental.nombre }}</td>
+          <td data-label="Condición" style="font-size:12px;font-weight:600;">{{ detalle.id_condicion.nombre }}</td>
+          <td data-label="Estado"><span class="badge-estado activa" style="font-size:10px;">Registrado</span></td>
+          <td data-label="Profesional" style="font-size:12px;">{{ odontograma.id_odontologo.nombre_completo|default:"—" }}</td>
+          <td data-label="Observación" style="font-size:12px;color:var(--color-texto-suave);">{{ detalle.observacion|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+        {% for h in odontograma.historial.all %}
+        <tr>
+          <td data-label="Fecha">{{ h.fecha|date:"d/m/Y H:i" }}</td>
+          <td data-label="Pieza"><span class="badge-estado activa" style="font-size:11px;">{{ h.pieza_dental_id }}</span></td>
+          <td data-label="Cara" style="font-size:12px;">{{ h.tipo_cambio }}</td>
+          <td data-label="Condición" style="font-size:12px;">{{ h.detalle_cambio|truncatechars:60 }}</td>
+          <td data-label="Estado"><span class="badge-estado {{ h.estado_nuevo }}" style="font-size:10px;">{{ h.estado_nuevo|default:"—" }}</span></td>
+          <td data-label="Profesional" style="font-size:12px;">{{ h.usuario.nombre_completo|default:"—" }}</td>
+          <td data-label="Observación" style="font-size:12px;color:var(--color-texto-suave);">{{ h.estado_anterior|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+        {% if not odontograma.detalles.all and not odontograma.historial.all %}
+        <tr><td colspan="7">{% include "partials/_empty_state.html" with icon="🦷" title="Sin registros odontológicos" desc="No hay condiciones ni tratamientos registrados en este odontograma." %}</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/odontograma_avanzado.js' %}"></script>
+<script>
+// ── Datos del servidor ────────────────────────────────────────
+const ODONTOGRAMA_CONFIG = {
+  id: {{ odontograma.id_odontograma }},
+  fichaId: {{ odontograma.id_ficha_clinica_id }},
+  csrfToken: "{{ csrf_token }}",
+  apiBase: "/odontograma/api/",
+  detalles: {{ detalles_json|safe|default:"[]" }},
+  piezas: {{ piezas_json|safe|default:"[]" }},
+  readonly: {% if odontograma.estado_odontograma == "inactivo" %}true{% else %}false{% endif %},
+};
+
+// ── Filtros pills ─────────────────────────────────────────────
+document.querySelectorAll(".filter-pill").forEach(btn => {
+  btn.addEventListener("click", function() {
+    document.querySelectorAll(".filter-pill").forEach(b => { b.classList.remove("active"); b.setAttribute("aria-pressed","false"); });
+    this.classList.add("active");
+    this.setAttribute("aria-pressed","true");
+    const filter = this.dataset.filter;
+    filterOdontograma(filter);
+  });
+});
+
+function filterOdontograma(filter) {
+  // Implementado en odontograma_avanzado.js — emite evento
+  document.dispatchEvent(new CustomEvent("odontogramaFilter", { detail: { filter } }));
+}
+
+// ── Panel selección pieza ─────────────────────────────────────
+const panelNoSel = document.getElementById("panel-no-selection");
+const panelSel   = document.getElementById("panel-selection");
+const piezaBadge = document.getElementById("pieza-selected-label");
+
+document.addEventListener("dienteSelecionado", function(e) {
+  const { numero, descripcion } = e.detail;
+  panelNoSel.style.display = "none";
+  panelSel.style.display = "block";
+  piezaBadge.textContent = `Pieza ${numero} — ${descripcion || ""}`;
+  document.getElementById("btn-enviar-plan").style.display = "none";
+});
+
+document.addEventListener("dienteDeseleccionado", function() {
+  panelNoSel.style.display = "";
+  panelSel.style.display = "none";
+});
+
+// ── State buttons ─────────────────────────────────────────────
+document.querySelectorAll(".state-btn").forEach(btn => {
+  btn.addEventListener("click", function() {
+    document.querySelectorAll(".state-btn").forEach(b => { b.classList.remove("selected"); b.setAttribute("aria-pressed","false"); });
+    this.classList.add("selected");
+    this.setAttribute("aria-pressed","true");
+    const state = this.dataset.state;
+    if (state === "planificado" || state === "completado") {
+      document.getElementById("btn-enviar-plan").style.display = "";
+    } else {
+      document.getElementById("btn-enviar-plan").style.display = "none";
+    }
+  });
+});
+
+// ── Buscador condiciones ──────────────────────────────────────
+document.getElementById("condicion-search").addEventListener("input", function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll(".condition-item").forEach(item => {
+    item.style.display = item.dataset.name.toLowerCase().includes(q) ? "" : "none";
+  });
+});
+
+// ── Selección condición ───────────────────────────────────────
+document.querySelectorAll(".condition-item").forEach(item => {
+  function selectCondition() {
+    document.querySelectorAll(".condition-item").forEach(i => { i.classList.remove("selected"); i.setAttribute("aria-selected","false"); });
+    item.classList.add("selected");
+    item.setAttribute("aria-selected","true");
+  }
+  item.addEventListener("click", selectCondition);
+  item.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectCondition(); } });
+});
+
+// ── Limpiar selección ─────────────────────────────────────────
+document.getElementById("btn-limpiar-seleccion").addEventListener("click", function() {
+  document.querySelectorAll(".condition-item").forEach(i => { i.classList.remove("selected"); i.setAttribute("aria-selected","false"); });
+  document.querySelectorAll(".state-btn").forEach(b => { b.classList.remove("selected"); b.setAttribute("aria-pressed","false"); });
+  document.getElementById("observacion-field").value = "";
+  document.getElementById("cara-select").value = "";
+  document.dispatchEvent(new CustomEvent("limpiarSeleccion"));
+});
+
+// ── Búsqueda en historial ─────────────────────────────────────
+document.getElementById("history-search").addEventListener("input", function() {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll("#history-table tbody tr").forEach(row => {
+    row.style.display = row.textContent.toLowerCase().includes(q) ? "" : "none";
+  });
+});
+
+// ── Tooltip ───────────────────────────────────────────────────
+const tooltip = document.getElementById("tooth-tooltip");
+document.addEventListener("mousemove", function(e) {
+  if (tooltip.classList.contains("visible")) {
+    tooltip.style.left = (e.clientX + 14) + "px";
+    tooltip.style.top  = (e.clientY - 10) + "px";
+  }
+});
+</script>
+{% endblock %}

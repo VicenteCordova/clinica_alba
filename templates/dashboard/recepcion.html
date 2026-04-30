@@ -1,0 +1,171 @@
+﻿{% extends 'base.html' %}
+{% load core_tags %}
+
+{% block title %}Recepción — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Recepción{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Hola, {{ request.user.nombre_completo|truncatewords:2 }} 👋</h1>
+    <p class="page-subtitle">{% now "l, d \d\e F \d\e Y" %}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'pacientes:crear' %}" class="btn btn-outline">
+      <i class="bi bi-person-plus" aria-hidden="true"></i> Nuevo Paciente
+    </a>
+    <a href="{% url 'agenda:crear_cita' %}" class="btn btn-clinical">
+      <i class="bi bi-calendar-plus" aria-hidden="true"></i> Nueva Cita
+    </a>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));">
+  <div class="kpi-card kpi-celeste kpi-card-clinical">
+    <div class="kpi-icon"><i class="bi bi-calendar-day" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas.count }}</div>
+    <div class="kpi-label">Citas de hoy</div>
+  </div>
+  <div class="kpi-card kpi-melocoton kpi-card-warning">
+    <div class="kpi-icon"><i class="bi bi-hourglass-split" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas|filter_estado:"en_espera"|length }}</div>
+    <div class="kpi-label">En espera</div>
+  </div>
+  <div class="kpi-card kpi-lavanda">
+    <div class="kpi-icon"><i class="bi bi-check2-circle" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas|filter_estado:"confirmada"|length }}</div>
+    <div class="kpi-label">Confirmadas</div>
+  </div>
+  <div class="kpi-card kpi-amarillo">
+    <div class="kpi-icon"><i class="bi bi-clock-history" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas|filter_estado:"pendiente"|length }}</div>
+    <div class="kpi-label">Pendientes</div>
+  </div>
+  <div class="kpi-card kpi-menta kpi-card-success">
+    <div class="kpi-icon"><i class="bi bi-person-check" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas|filter_estado:"atendida"|length }}</div>
+    <div class="kpi-label">Atendidas</div>
+  </div>
+</div>
+
+<div class="row g-4" hx-get="" hx-trigger="estadoCitaCambiado from:body" hx-swap="outerHTML">
+
+  <!-- SALA DE ESPERA -->
+  <div class="col-lg-4">
+    <div class="card h-100">
+      <div class="card-header" style="background:var(--color-melocoton);border-bottom:1px solid #fcd3b5;">
+        <h2 class="card-title" style="color:#9a3412;">
+          <i class="bi bi-people-fill me-2" aria-hidden="true"></i>Sala de espera
+        </h2>
+        <span class="badge-estado en_espera" aria-label="Pacientes en espera">
+          {{ citas|filter_estado:"en_espera"|length }}
+        </span>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          {% for cita in citas %}
+          {% if cita.id_estado_cita.nombre == 'en_espera' %}
+          <div class="list-group-item p-3 border-start border-4" style="border-color:#f97316!important;">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+              <a href="{% url 'pacientes:detalle' cita.id_paciente_id %}" class="fw-bold text-decoration-none" style="color:var(--color-texto);">
+                {{ cita.id_paciente.nombre_completo }}
+              </a>
+              <span style="font-size:12px;font-weight:700;color:#9a3412;">{{ cita.fecha_hora_inicio|date:"H:i" }}</span>
+            </div>
+            <div class="text-muted small mb-2">
+              <i class="bi bi-person-badge me-1" aria-hidden="true"></i>Dr(a). {{ cita.id_odontologo.nombre_completo }}
+            </div>
+            <div class="d-flex gap-1 flex-wrap">
+              <span class="badge-estado en_atencion" style="font-size:10px;">Esperando atención</span>
+            </div>
+          </div>
+          {% endif %}
+          {% endfor %}
+          {% if not citas|filter_estado:"en_espera" %}
+          <div class="empty-state py-4">
+            <div class="empty-state-icon">☕</div>
+            <div class="empty-state-title" style="font-size:14px;">Sala vacía</div>
+            <div class="empty-state-desc">No hay pacientes esperando en este momento.</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AGENDA DEL DÍA -->
+  <div class="col-lg-8">
+    <div class="card h-100">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="bi bi-calendar-event me-2" aria-hidden="true"></i>Agenda de hoy
+        </h2>
+        <div class="d-flex gap-2 align-items-center">
+          <span class="badge-estado confirmada" style="font-size:11px;" aria-label="{{ citas.count }} citas totales">
+            {{ citas.count }} citas
+          </span>
+          <a href="{% url 'agenda:calendario' %}" class="btn btn-outline btn-sm">
+            <i class="bi bi-calendar3" aria-hidden="true"></i> Ver agenda
+          </a>
+        </div>
+      </div>
+      <div class="card-body p-0">
+        {% if citas %}
+        <div class="table-wrapper" style="border:none;border-radius:0;">
+          <table class="alba-table" aria-label="Agenda del día">
+            <thead>
+              <tr>
+                <th>Hora</th><th>Paciente</th><th>Odontólogo</th><th>Estado</th><th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cita in citas %}
+              <tr>
+                <td data-label="Hora"><strong>{{ cita.fecha_hora_inicio|date:"H:i" }}</strong></td>
+                <td data-label="Paciente">
+                  <a href="{% url 'pacientes:detalle' cita.id_paciente_id %}" style="color:var(--color-texto);font-weight:600;text-decoration:none;">
+                    {{ cita.id_paciente.nombre_completo }}
+                  </a>
+                  <div style="font-size:11px;color:var(--color-texto-muy-suave);">{{ cita.id_paciente.rut|rut_format }}</div>
+                </td>
+                <td data-label="Odontólogo" style="font-size:13px;">Dr(a). {{ cita.id_odontologo.nombre_completo }}</td>
+                <td data-label="Estado">
+                  <span class="badge-estado {{ cita.id_estado_cita.nombre }}" id="badge-cita-{{ cita.id_cita }}">
+                    {{ cita.id_estado_cita.nombre }}
+                  </span>
+                </td>
+                <td class="text-end" data-label="Acciones">
+                  {% if cita.id_estado_cita.nombre == 'pendiente' %}
+                  <button class="btn btn-sm btn-outline"
+                          hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'confirmada' %}"
+                          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                          title="Confirmar cita" aria-label="Confirmar cita de {{ cita.id_paciente.nombre_completo }}">
+                    <i class="bi bi-telephone-check" aria-hidden="true"></i> Confirmar
+                  </button>
+                  {% endif %}
+                  {% if cita.id_estado_cita.nombre == 'confirmada' or cita.id_estado_cita.nombre == 'pendiente' %}
+                  <button class="btn btn-sm btn-success ms-1"
+                          hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'en_espera' %}"
+                          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                          title="Registrar llegada" aria-label="Registrar llegada de {{ cita.id_paciente.nombre_completo }}">
+                    <i class="bi bi-person-check-fill" aria-hidden="true"></i> Llegó
+                  </button>
+                  {% endif %}
+                  <a href="{% url 'agenda:detalle_cita' cita.id_cita %}" class="btn btn-sm btn-ghost ms-1" aria-label="Ver detalle de cita">
+                    <i class="bi bi-three-dots" aria-hidden="true"></i>
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        {% include 'partials/_empty_state.html' with icon="📅" title="Sin citas para hoy" desc="No hay citas agendadas para el día de hoy." cta_url="/agenda/crear/" cta_label="Agendar cita" %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

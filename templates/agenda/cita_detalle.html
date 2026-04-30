@@ -1,0 +1,132 @@
+﻿{% extends 'base.html' %}
+{% load core_tags humanize %}
+{% block title %}Cita #{{ cita.id_cita }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Detalle de Cita{% endblock %}
+{% block breadcrumb %}<a href="{% url 'dashboard:index' %}">Inicio</a><span class="breadcrumb-sep">/</span><a href="{% url 'agenda:calendario' %}">Agenda</a><span class="breadcrumb-sep">/</span>Cita #{{ cita.id_cita }}{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Cita #{{ cita.id_cita }}</h1>
+    <p class="page-subtitle">{{ cita.fecha_hora_inicio|date:"l, d \d\e F \d\e Y" }} · {{ cita.fecha_hora_inicio|date:"H:i" }} — {{ cita.fecha_hora_fin|date:"H:i" }}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    <span class="badge-estado {{ cita.id_estado_cita.nombre }}" style="font-size:14px;padding:6px 16px;">{{ cita.id_estado_cita.nombre }}</span>
+    {% if cita.id_estado_cita.nombre == "en_espera" or cita.id_estado_cita.nombre == "en_atencion" %}
+    <a href="{% url 'fichas:modo_atencion' cita.id_cita %}" class="btn btn-clinical"><i class="bi bi-play-circle" aria-hidden="true"></i> Iniciar atención</a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <!-- Datos de la cita -->
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-calendar-event me-2" aria-hidden="true"></i>Información de la cita</h2></div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Paciente</label>
+            <p><a href="{% url 'pacientes:detalle' cita.id_paciente_id %}" class="fw-bold text-decoration-none" style="color:var(--color-acento);">{{ cita.id_paciente.nombre_completo }}</a></p>
+            <p style="font-size:12px;color:var(--color-texto-suave);">{{ cita.id_paciente.rut|rut_format }}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Odontólogo</label>
+            <p class="fw-600">Dr(a). {{ cita.id_odontologo.nombre_completo }}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Tipo de atención</label>
+            <p>{{ cita.id_tipo_atencion.nombre }}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Box</label>
+            <p>{{ cita.id_box.nombre }}{% if cita.id_box.ubicacion %} — {{ cita.id_box.ubicacion }}{% endif %}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fecha y hora inicio</label>
+            <p class="fw-600">{{ cita.fecha_hora_inicio|date:"d/m/Y H:i" }}</p>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Fecha y hora fin</label>
+            <p>{{ cita.fecha_hora_fin|date:"d/m/Y H:i" }}</p>
+          </div>
+          {% if cita.motivo_consulta %}
+          <div class="col-12">
+            <label class="form-label">Motivo de consulta</label>
+            <p>{{ cita.motivo_consulta }}</p>
+          </div>
+          {% endif %}
+          {% if cita.observaciones %}
+          <div class="col-12">
+            <label class="form-label">Observaciones</label>
+            <p style="font-size:13px;color:var(--color-texto-suave);">{{ cita.observaciones }}</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Acciones de estado -->
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-gear me-2" aria-hidden="true"></i>Gestión de estado</h2></div>
+      <div class="card-body d-flex gap-2 flex-wrap">
+        {% if cita.id_estado_cita.nombre == "pendiente" %}
+        <button class="btn btn-outline" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'confirmada' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none"><i class="bi bi-telephone-check" aria-hidden="true"></i> Confirmar</button>
+        {% endif %}
+        {% if cita.id_estado_cita.nombre == "pendiente" or cita.id_estado_cita.nombre == "confirmada" %}
+        <button class="btn btn-warning" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'en_espera' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none"><i class="bi bi-person-check-fill" aria-hidden="true"></i> Paciente llegó</button>
+        {% endif %}
+        {% if cita.id_estado_cita.nombre != "cancelada" and cita.id_estado_cita.nombre != "atendida" %}
+        <button class="btn btn-danger" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'cancelada' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none" hx-confirm="¿Confirmas la cancelación de esta cita?"><i class="bi bi-x-circle" aria-hidden="true"></i> Cancelar cita</button>
+        {% endif %}
+        <a href="{% url 'agenda:crear_cita' %}?paciente={{ cita.id_paciente_id }}" class="btn btn-outline"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Reagendar</a>
+      </div>
+    </div>
+
+    <!-- Historial de cambios -->
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-clock-history me-2" aria-hidden="true"></i>Historial de cambios</h2></div>
+      <div class="card-body p-0">
+        <div class="timeline" style="padding:16px 16px 0 40px;">
+          {% for h in cita.historial.all %}
+          <div class="timeline-item">
+            <div class="timeline-dot" style="background:var(--color-acento);" aria-hidden="true"></div>
+            <div class="timeline-date">{{ h.fecha_cambio|date:"d/m/Y H:i" }} — {{ h.id_usuario_responsable.nombre_completo }}</div>
+            <div class="timeline-content">
+              <div class="timeline-content-title">
+                {% if h.id_estado_anterior %}<span class="badge-estado {{ h.id_estado_anterior.nombre }}" style="font-size:10px;">{{ h.id_estado_anterior.nombre }}</span> → {% endif %}
+                <span class="badge-estado {{ h.id_estado_nuevo.nombre }}" style="font-size:10px;">{{ h.id_estado_nuevo.nombre }}</span>
+              </div>
+              {% if h.motivo_cambio %}<div class="timeline-content-sub">{{ h.motivo_cambio }}</div>{% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div style="padding:12px 0;font-size:13px;color:var(--color-texto-suave);">Sin cambios registrados.</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Columna lateral -->
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title" style="font-size:13px;"><i class="bi bi-person me-2" aria-hidden="true"></i>Paciente</h2></div>
+      <div class="card-body" style="font-size:13px;">
+        <div class="patient-avatar-lg" style="width:44px;height:44px;font-size:18px;margin-bottom:10px;" aria-hidden="true">{{ cita.id_paciente.id_persona.nombres|first|upper }}</div>
+        <p class="fw-700">{{ cita.id_paciente.nombre_completo }}</p>
+        <p style="color:var(--color-texto-suave);">{{ cita.id_paciente.rut|rut_format }}</p>
+        {% if cita.id_paciente.id_persona.telefono %}<p><i class="bi bi-telephone me-1" aria-hidden="true"></i>{{ cita.id_paciente.id_persona.telefono }}</p>{% endif %}
+        <a href="{% url 'pacientes:detalle' cita.id_paciente_id %}" class="btn btn-clinical btn-sm w-100 mt-2"><i class="bi bi-person-lines-fill" aria-hidden="true"></i> Centro del Paciente</a>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2 class="card-title" style="font-size:13px;"><i class="bi bi-info-circle me-2" aria-hidden="true"></i>Registro</h2></div>
+      <div class="card-body" style="font-size:12px;color:var(--color-texto-suave);">
+        <p><strong>Registró:</strong> {{ cita.id_usuario_registra.nombre_completo }}</p>
+        <p><strong>Creada:</strong> {{ cita.fecha_creacion|date:"d/m/Y H:i" }}</p>
+        <p><strong>Actualizada:</strong> {{ cita.fecha_actualizacion|date:"d/m/Y H:i" }}</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

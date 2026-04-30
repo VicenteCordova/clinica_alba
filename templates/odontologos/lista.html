@@ -1,0 +1,58 @@
+<!-- templates/odontologos/lista.html -->
+{% extends 'base.html' %}
+{% block title %}Odontólogos — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Odontólogos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Odontólogos</h1>
+    <p class="page-subtitle">Equipo profesional de la clínica</p>
+  </div>
+  <a href="{% url 'odontologos:crear' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Nuevo odontólogo</a>
+</div>
+
+<div class="row g-3">
+  {% for od in odontologos %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card" style="transition: transform .18s ease;">
+      <div class="card-body" style="padding:24px;">
+        <div class="d-flex align-items-center gap-3 mb-3">
+          <div style="width:52px;height:52px;background:linear-gradient(135deg,var(--color-acento),#a78bfa);border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:18px;flex-shrink:0;">
+            {{ od.id_usuario.id_persona.nombres|first|upper }}
+          </div>
+          <div>
+            <div style="font-weight:700;font-size:15px;">Dr(a). {{ od.nombre_completo }}</div>
+            <div style="font-size:12px;color:var(--color-texto-muy-suave);">Reg. {{ od.numero_registro }}</div>
+          </div>
+        </div>
+        <!-- Especialidades -->
+        <div class="d-flex flex-wrap gap-1 mb-3">
+          {% for oe in od.odontologo_especialidades.all %}
+          <span style="background:var(--color-lavanda);color:#5b21b6;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:600;">
+            {{ oe.especialidad.nombre }}
+          </span>
+          {% empty %}
+          <span style="color:var(--color-texto-muy-suave);font-size:12px;">Sin especialidades</span>
+          {% endfor %}
+        </div>
+        <div class="d-flex align-items-center justify-content-between">
+          <span class="badge-estado {{ od.estado_profesional }}">{{ od.estado_profesional }}</span>
+          <a href="{% url 'odontologos:detalle' od.id_odontologo %}" class="btn btn-outline btn-sm">
+            <i class="bi bi-eye"></i> Ver perfil
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="empty-state" style="padding:64px;">
+      <div class="empty-state-icon">👨‍⚕️</div>
+      <div class="empty-state-title">Sin odontólogos registrados</div>
+      <a href="{% url 'odontologos:crear' %}" class="btn btn-primary mt-3">Agregar primer odontólogo</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

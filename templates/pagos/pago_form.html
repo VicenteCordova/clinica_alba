@@ -1,0 +1,97 @@
+<!-- templates/pagos/pago_form.html -->
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Registrar pago — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Registrar pago{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Registrar pago</h1>
+    <p class="page-subtitle">Presupuesto {{ presupuesto.numero_presupuesto }}</p>
+  </div>
+  <a href="{% url 'presupuestos:detalle' presupuesto.id_presupuesto %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-cash me-2"></i>Datos del pago</h2></div>
+      <div class="card-body">
+
+        <!-- Resumen del presupuesto -->
+        <div class="card mb-4" style="background:var(--color-celeste);border:none;">
+          <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#0369a1;text-transform:uppercase;">Monto total</div>
+              <div style="font-size:22px;font-weight:800;color:#0369a1;">{{ presupuesto.monto_final|pesos_cl }}</div>
+            </div>
+            <div>
+              <div style="font-size:12px;font-weight:700;color:#0369a1;text-transform:uppercase;">Saldo pendiente</div>
+              <div style="font-size:22px;font-weight:800;color:{% if presupuesto.saldo_pendiente > 0 %}#dc2626{% else %}#059669{% endif %};">
+                {{ presupuesto.saldo_pendiente|pesos_cl }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <form method="post" novalidate>
+          {% csrf_token %}
+          {% if caja_abierta %}
+          <div class="alert alert-info py-2">Caja abierta #{{ caja_abierta.id_caja }}. El pago generara un ingreso automaticamente.</div>
+          {% endif %}
+          <div class="form-group">
+            <label class="form-label">Medio de pago <span style="color:#ef4444;">*</span></label>
+            {{ form.id_medio_pago }}
+          </div>
+          <div class="form-group">
+            <label class="form-label">Monto a pagar ($) <span style="color:#ef4444;">*</span></label>
+            {{ form.monto }}
+            {% if presupuesto.saldo_pendiente > 0 %}
+            <div class="form-text">Saldo pendiente: {{ presupuesto.saldo_pendiente|pesos_cl }}</div>
+            {% endif %}
+          </div>
+          <div class="form-group">
+            <label class="form-label">N° Comprobante / Referencia</label>
+            {{ form.numero_comprobante }}
+            <div class="form-text">Para transferencias, cheques o tarjeta: ingresa el número de referencia.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observacion</label>
+            {{ form.observacion }}
+          </div>
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-check-circle"></i> Confirmar pago
+            </button>
+            <a href="{% url 'presupuestos:detalle' presupuesto.id_presupuesto %}" class="btn btn-outline">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-receipt me-2"></i>Información del presupuesto</h2></div>
+      <div class="card-body">
+        <table class="alba-table">
+          <tbody>
+            <tr><td style="color:var(--color-texto-suave);">Paciente</td><td><strong>{{ presupuesto.id_plan_tratamiento.id_ficha_clinica.id_paciente.nombre_completo }}</strong></td></tr>
+            <tr><td style="color:var(--color-texto-suave);">N° Presupuesto</td><td style="font-family:monospace;">{{ presupuesto.numero_presupuesto }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Emisión</td><td>{{ presupuesto.fecha_emision|date:"d/m/Y" }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Monto bruto</td><td>{{ presupuesto.monto_bruto|pesos_cl }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Descuento</td><td>{{ presupuesto.descuento_total|pesos_cl }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Total</td><td style="font-weight:800;font-size:15px;">{{ presupuesto.monto_final|pesos_cl }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Total pagado</td><td style="color:#065f46;font-weight:700;">{{ presupuesto.total_pagado|pesos_cl }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Saldo</td>
+            <td style="font-weight:700;color:{% if presupuesto.saldo_pendiente > 0 %}#dc2626{% else %}#065f46{% endif %};">
+              {{ presupuesto.saldo_pendiente|pesos_cl }}
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

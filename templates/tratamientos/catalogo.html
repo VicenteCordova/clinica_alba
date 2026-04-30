@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Catálogo de Tratamientos — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Tratamientos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Catálogo de tratamientos</h1>
+    <p class="page-subtitle">{{ tratamientos|length }} tratamiento{{ tratamientos|length|pluralize }} disponible{{ tratamientos|length|pluralize }}</p>
+  </div>
+  <a href="{% url 'tratamientos:planes' %}" class="btn btn-outline"><i class="bi bi-clipboard2-check"></i> Ver planes</a>
+</div>
+
+<div class="row g-3">
+  {% for t in tratamientos %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card h-100" style="transition: transform .18s ease, box-shadow .18s ease;"
+         onmouseover="this.style.transform='translateY(-3px)';this.style.boxShadow='var(--shadow-lg)'"
+         onmouseout="this.style.transform='';this.style.boxShadow=''">
+      <div class="card-body">
+        <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+          <div>
+            <div style="font-family:monospace;font-size:11px;color:var(--color-acento);font-weight:700;margin-bottom:2px;">{{ t.codigo }}</div>
+            <div style="font-weight:700;font-size:15px;">{{ t.nombre }}</div>
+          </div>
+          <span class="badge-estado {{ t.estado_tratamiento }}">{{ t.estado_tratamiento }}</span>
+        </div>
+        {% if t.descripcion %}
+        <p style="font-size:13px;color:var(--color-texto-suave);margin-bottom:12px;">{{ t.descripcion|truncatechars:80 }}</p>
+        {% endif %}
+        <div class="d-flex align-items-center justify-content-between mt-auto">
+          <div style="font-size:18px;font-weight:800;color:var(--color-acento);">
+            {{ t.valor_referencial|pesos_cl }}
+          </div>
+          {% if t.duracion_estimada_min %}
+          <div style="font-size:12px;color:var(--color-texto-muy-suave);">
+            <i class="bi bi-clock me-1"></i>{{ t.duracion_estimada_min }} min
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div class="empty-state" style="padding:64px;">
+      <div class="empty-state-icon">🦷</div>
+      <div class="empty-state-title">Sin tratamientos en el catálogo</div>
+      <div class="empty-state-desc">Carga el fixture inicial para poblar el catálogo.</div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

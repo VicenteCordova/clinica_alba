@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Usuarios - {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Usuarios y Roles{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="page-title">Usuarios</h1>
+    <p class="page-subtitle">Gestion de acceso con desactivacion logica.</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'accounts:roles_lista' %}" class="btn btn-outline-primary">
+      <i class="bi bi-shield-check"></i> Roles
+    </a>
+    <a href="{% url 'accounts:usuarios_crear' %}" class="btn btn-primary">
+      <i class="bi bi-person-plus"></i> Nuevo usuario
+    </a>
+  </div>
+</div>
+
+<div class="card mb-3">
+  <div class="card-body">
+    <form method="get" class="row g-2">
+      <div class="col-md-6">
+        <input type="search" name="q" value="{{ q }}" class="form-control" placeholder="Buscar por usuario o nombre">
+      </div>
+      <div class="col-md-3">
+        <select name="estado" class="form-select">
+          <option value="">Todos los estados</option>
+          <option value="activo" {% if estado == 'activo' %}selected{% endif %}>Activo</option>
+          <option value="inactivo" {% if estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+          <option value="bloqueado" {% if estado == 'bloqueado' %}selected{% endif %}>Bloqueado</option>
+        </select>
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary w-100"><i class="bi bi-search"></i> Filtrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <table class="alba-table">
+      <thead>
+        <tr>
+          <th>Usuario</th>
+          <th>Persona</th>
+          <th>Roles</th>
+          <th>Estado</th>
+          <th class="text-end">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for usuario in usuarios %}
+        <tr>
+          <td class="fw-semibold">{{ usuario.username }}</td>
+          <td>{{ usuario.nombre_completo }}</td>
+          <td>
+            {% for rel in usuario.usuario_roles.all %}
+              <span class="badge bg-light text-dark border">{{ rel.rol.nombre }}</span>
+            {% empty %}
+              <span class="text-muted">Sin rol</span>
+            {% endfor %}
+          </td>
+          <td>
+            <span class="badge {% if usuario.estado_acceso == 'activo' %}bg-success{% elif usuario.estado_acceso == 'bloqueado' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+              {{ usuario.estado_acceso }}
+            </span>
+          </td>
+          <td class="text-end">
+            <a href="{% url 'accounts:usuarios_editar' usuario.id_usuario %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil"></i></a>
+            <a href="{% url 'accounts:usuarios_reset_password' usuario.id_usuario %}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-key"></i></a>
+            {% if usuario.estado_acceso == 'activo' %}
+            <form action="{% url 'accounts:usuarios_desactivar' usuario.id_usuario %}" method="post" class="d-inline" onsubmit="return confirm('Desactivar este usuario?');">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-slash-circle"></i></button>
+            </form>
+            {% else %}
+            <form action="{% url 'accounts:usuarios_activar' usuario.id_usuario %}" method="post" class="d-inline">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-outline-success"><i class="bi bi-check-circle"></i></button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center text-muted p-4">No hay usuarios registrados.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

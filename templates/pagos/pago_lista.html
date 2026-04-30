@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Pagos — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Pagos{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="page-title">Historial de Pagos</h1>
+    <p class="page-subtitle">Registro de ingresos y pagos de presupuestos.</p>
+  </div>
+</div>
+
+<div class="row mb-4">
+  <div class="col-md-4">
+    <div class="kpi-card">
+      <div class="kpi-icon bg-success-subtle text-success">
+        <i class="bi bi-cash"></i>
+      </div>
+      <div class="kpi-info">
+        <h3>{{ total_hoy|pesos_cl }}</h3>
+        <p>Ingresos de Hoy ({{ count_hoy }} pagos)</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="kpi-card">
+      <div class="kpi-icon bg-primary-subtle text-primary">
+        <i class="bi bi-wallet2"></i>
+      </div>
+      <div class="kpi-info">
+        <h3>{{ total_vigente|pesos_cl }}</h3>
+        <p>Total Vigente (Histórico)</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body">
+    <form method="get" class="row g-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Buscar</label>
+        <input type="text" name="q" class="form-control" placeholder="N° Presupuesto, Paciente..." value="{{ filtro_q }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Estado</label>
+        <select name="estado" class="form-select">
+          <option value="">Todos</option>
+          <option value="vigente" {% if filtro_estado == 'vigente' %}selected{% endif %}>Vigente</option>
+          <option value="anulado" {% if filtro_estado == 'anulado' %}selected{% endif %}>Anulado</option>
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Medio</label>
+        <select name="medio" class="form-select">
+          <option value="">Todos</option>
+          {% for m in medios %}
+          <option value="{{ m.id_medio_pago }}" {% if filtro_medio == m.id_medio_pago|stringformat:"s" %}selected{% endif %}>{{ m.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Desde</label>
+        <input type="date" name="fecha_desde" class="form-control" value="{{ filtro_fecha_desde }}">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label">Hasta</label>
+        <input type="date" name="fecha_hasta" class="form-control" value="{{ filtro_fecha_hasta }}">
+      </div>
+      <div class="col-md-1">
+        <button type="submit" class="btn btn-primary w-100"><i class="bi bi-search"></i></button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="alba-table w-100 m-0">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Fecha</th>
+            <th>Paciente</th>
+            <th>Presupuesto</th>
+            <th>Medio</th>
+            <th>Monto</th>
+            <th>Estado</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for pago in pagos %}
+          <tr>
+            <td>#{{ pago.id_pago }}</td>
+            <td>{{ pago.fecha_pago|date:"d/m/Y H:i" }}</td>
+            <td>{{ pago.id_presupuesto.id_plan_tratamiento.id_ficha_clinica.id_paciente.nombre_completo }}</td>
+            <td>
+              <a href="{% url 'presupuestos:detalle' pago.id_presupuesto.id_presupuesto %}">
+                {{ pago.id_presupuesto.numero_presupuesto }}
+              </a>
+            </td>
+            <td>{{ pago.id_medio_pago.nombre }}</td>
+            <td style="font-weight: 700;">{{ pago.monto|pesos_cl }}</td>
+            <td>
+              {% if pago.estado_pago == 'vigente' %}
+                <span class="badge bg-success">Vigente</span>
+              {% else %}
+                <span class="badge bg-danger" title="{{ pago.motivo_anulacion }}">Anulado</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if pago.estado_pago == 'vigente' and request.user|user_tiene_rol:"cajero,administrador" %}
+              <a href="{% url 'pagos:anular' pago.id_pago %}" class="btn btn-sm btn-outline-danger" title="Anular Pago">
+                <i class="bi bi-x-circle"></i>
+              </a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">No se encontraron pagos con los filtros actuales.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,87 @@
+<!-- templates/personas/detalle.html -->
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}{{ persona.nombre_completo }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Detalle de persona{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ persona.nombre_completo }}</h1>
+    <p class="page-subtitle">RUT: {{ persona.rut|rut_format }}</p>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{% url 'personas:editar' persona.id_persona %}" class="btn btn-outline"><i class="bi bi-pencil"></i> Editar</a>
+    <a href="{% url 'personas:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-person me-2"></i>Datos personales</h2></div>
+      <div class="card-body">
+        <table class="alba-table">
+          <tbody>
+            <tr><td style="color:var(--color-texto-suave); width:40%;">RUT</td><td><strong>{{ persona.rut|rut_format }}</strong></td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Nombre completo</td><td>{{ persona.nombre_completo }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Sexo</td><td>{{ persona.id_sexo|default:"—" }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Fecha nacimiento</td><td>{{ persona.fecha_nacimiento|date:"d/m/Y"|default:"—" }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Edad</td><td>{% if persona.fecha_nacimiento %}{{ persona.fecha_nacimiento|edad }} años{% else %}—{% endif %}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Estado</td><td><span class="badge-estado {{ persona.estado_persona }}">{{ persona.estado_persona }}</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-telephone me-2"></i>Contacto</h2></div>
+      <div class="card-body">
+        <table class="alba-table">
+          <tbody>
+            <tr><td style="color:var(--color-texto-suave); width:40%;">Correo</td><td>{{ persona.correo|default:"—" }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Teléfono</td><td>{{ persona.telefono|default:"—" }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Dirección</td><td>{{ persona.direccion|default:"—" }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Comuna</td><td>{{ persona.comuna|default:"—" }}</td></tr>
+            <tr><td style="color:var(--color-texto-suave);">Ciudad</td><td>{{ persona.ciudad|default:"—" }}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {% if persona.usuario %}
+  <div class="col-12">
+    <div class="card" style="border-left: 4px solid var(--color-acento);">
+      <div class="card-body d-flex align-items-center gap-3">
+        <div class="kpi-icon kpi-lavanda" style="background:var(--color-lavanda);"><i class="bi bi-person-badge" style="color:#5b21b6;"></i></div>
+        <div>
+          <div style="font-weight:600;">Usuario del sistema</div>
+          <div style="font-size:13px; color:var(--color-texto-suave);">{{ persona.usuario.username }} — <span class="badge-estado {{ persona.usuario.estado_acceso }}">{{ persona.usuario.estado_acceso }}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if persona.paciente %}
+  <div class="col-12">
+    <div class="card" style="border-left: 4px solid #10b981;">
+      <div class="card-body d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-3">
+          <div style="width:44px;height:44px;background:var(--color-menta);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:20px;">🦷</div>
+          <div>
+            <div style="font-weight:600;">Registrado como paciente</div>
+            <div style="font-size:13px; color:var(--color-texto-suave);">Paciente #{{ persona.paciente.id_paciente }}</div>
+          </div>
+        </div>
+        <a href="{% url 'pacientes:detalle' persona.paciente.id_paciente %}" class="btn btn-success btn-sm">
+          <i class="bi bi-clipboard2-pulse"></i> Ver ficha
+        </a>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

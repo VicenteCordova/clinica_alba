@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Planes de tratamiento — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Planes de tratamiento{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Planes de tratamiento</h1>
+    <p class="page-subtitle">Registro de todos los planes clínicos</p>
+  </div>
+  <a href="{% url 'tratamientos:lista' %}" class="btn btn-outline"><i class="bi bi-grid me-1"></i>Catálogo</a>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table class="alba-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Paciente</th>
+          <th>Odontólogo</th>
+          <th>Fecha</th>
+          <th>Ítems</th>
+          <th>Estado</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plan in planes %}
+        <tr>
+          <td style="font-weight:700;color:var(--color-acento);">#{{ plan.id_plan_tratamiento }}</td>
+          <td>
+            <a href="{% url 'pacientes:detalle' plan.id_ficha_clinica.id_paciente_id %}"
+               style="font-weight:600;color:var(--color-texto);text-decoration:none;">
+              {{ plan.id_ficha_clinica.id_paciente.nombre_completo }}
+            </a>
+            <div style="font-size:11px;color:var(--color-texto-muy-suave);">
+              {{ plan.id_ficha_clinica.id_paciente.rut|rut_format }}
+            </div>
+          </td>
+          <td style="font-size:13px;">Dr(a). {{ plan.id_odontologo.nombre_completo }}</td>
+          <td style="font-size:13px;">{{ plan.fecha_creacion|date:"d/m/Y" }}</td>
+          <td>
+            <span style="background:var(--color-lavanda);color:#5b21b6;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;">
+              {{ plan.detalles.count }} ítem{{ plan.detalles.count|pluralize }}
+            </span>
+          </td>
+          <td><span class="badge-estado {{ plan.estado_plan }}">{{ plan.estado_plan }}</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'tratamientos:plan_detalle' plan.id_plan_tratamiento %}" class="btn btn-outline btn-sm">
+                <i class="bi bi-eye"></i>
+              </a>
+              <a href="{% url 'presupuestos:emitir' plan.id_plan_tratamiento %}" class="btn btn-primary btn-sm">
+                <i class="bi bi-receipt"></i> Presupuesto
+              </a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="empty-state" style="padding:48px;">
+              <div class="empty-state-icon">📋</div>
+              <div class="empty-state-title">Sin planes de tratamiento</div>
+              <div class="empty-state-desc">Los planes se crean desde la ficha clínica del paciente.</div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if planes %}<div class="card-body pt-0">{% include 'partials/_pagination.html' %}</div>{% endif %}
+</div>
+{% endblock %}

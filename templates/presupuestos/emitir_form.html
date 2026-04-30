@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Emitir presupuesto — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Emitir presupuesto{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Emitir presupuesto</h1>
+    <p class="page-subtitle">Plan #{{ plan.id_plan_tratamiento }} — {{ plan.id_ficha_clinica.id_paciente.nombre_completo }}</p>
+  </div>
+  <a href="{% url 'tratamientos:plan_detalle' plan.id_plan_tratamiento %}" class="btn btn-outline">
+    <i class="bi bi-arrow-left"></i> Volver al plan
+  </a>
+</div>
+
+<form method="post" id="form-presupuesto">
+  {% csrf_token %}
+  <div class="row g-4">
+
+    <div class="col-lg-8">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="card-title"><i class="bi bi-list-check me-2"></i>Selecciona ítems a presupuestar</h2>
+          <button type="button" class="btn btn-outline btn-sm" onclick="toggleTodos()">
+            <i class="bi bi-check2-all"></i> Todos / Ninguno
+          </button>
+        </div>
+        <div class="table-wrapper" style="border:none;border-radius:0;">
+          <table class="alba-table">
+            <thead>
+              <tr>
+                <th style="width:40px;">
+                  <input type="checkbox" id="check-all" onchange="toggleTodos(this.checked)" class="form-check-input">
+                </th>
+                <th>Tratamiento</th>
+                <th>Pieza</th>
+                <th>Cant.</th>
+                <th>Valor unit.</th>
+                <th>Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for det in detalles %}
+              <tr>
+                <td>
+                  <input type="checkbox" name="detalles" value="{{ det.id_plan_detalle }}"
+                         class="form-check-input item-check"
+                         data-subtotal="{{ det.subtotal }}"
+                         onchange="calcularTotales()" checked>
+                </td>
+                <td>
+                  <div style="font-weight:600;font-size:13px;">{{ det.id_tratamiento.nombre }}</div>
+                  <div style="font-size:11px;color:var(--color-texto-muy-suave);font-family:monospace;">{{ det.id_tratamiento.codigo }}</div>
+                </td>
+                <td>
+                  {% if det.codigo_pieza_dental_id %}
+                  <span style="background:var(--color-celeste);color:#0369a1;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:700;">
+                    🦷 {{ det.codigo_pieza_dental_id }}
+                  </span>
+                  {% else %}—{% endif %}
+                </td>
+                <td style="text-align:center;font-weight:600;">{{ det.cantidad }}</td>
+                <td>{{ det.valor_unitario|pesos_cl }}</td>
+                <td style="font-weight:700;" class="subtotal-cell">{{ det.subtotal|pesos_cl }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="6">
+                  <div class="empty-state" style="padding:24px;">
+                    <div class="empty-state-icon">📋</div>
+                    <div class="empty-state-title">Sin ítems pendientes en este plan</div>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        {% if detalles %}
+        <!-- Sección de totales y descuento -->
+        <div class="card-body" style="border-top:2px solid var(--color-borde);">
+          <div class="row align-items-end g-3">
+            <div class="col-md-6">
+              <div class="form-group mb-0">
+                <label class="form-label">Descuento ($)</label>
+                {% if request.user|user_tiene_rol:'administrador,director,director_clinico' %}
+                <input type="number" name="descuento_total" id="descuento" class="form-control"
+                       value="0" min="0" step="1000" onchange="calcularTotales()"
+                       placeholder="0">
+                {% else %}
+                <input type="number" name="descuento_total" id="descuento" class="form-control"
+                       value="0" readonly title="No tienes permisos para aplicar descuentos">
+                <div class="form-text text-warning" style="font-size:11px;">Solo administradores pueden aplicar descuentos.</div>
+                {% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div style="background:var(--color-acento-light);border-radius:var(--radius);padding:14px;">
+                <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
+                  <span style="color:var(--color-texto-suave);">Monto bruto:</span>
+                  <strong id="bruto-display">$0</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-1" style="font-size:13px;">
+                  <span style="color:#dc2626;">Descuento:</span>
+                  <strong id="descuento-display" style="color:#dc2626;">$0</strong>
+                </div>
+                <hr style="border-color:var(--color-borde);margin:8px 0;">
+                <div class="d-flex justify-content-between" style="font-size:16px;font-weight:800;">
+                  <span>TOTAL:</span>
+                  <span id="total-display" style="color:var(--color-acento);">$0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Panel lateral -->
+    <div class="col-lg-4">
+      <div class="card mb-3">
+        <div class="card-header"><h2 class="card-title"><i class="bi bi-person me-2"></i>Paciente</h2></div>
+        <div class="card-body">
+          <div style="font-weight:700;font-size:14px;">{{ plan.id_ficha_clinica.id_paciente.nombre_completo }}</div>
+          <div style="font-size:12px;color:var(--color-texto-suave);">{{ plan.id_ficha_clinica.id_paciente.rut|rut_format }}</div>
+          <hr style="border-color:var(--color-borde);margin:10px 0;">
+          <div style="font-size:13px;">Dr(a). {{ plan.id_odontologo.nombre_completo }}</div>
+          <div style="font-size:11px;color:var(--color-texto-muy-suave);">Plan #{{ plan.id_plan_tratamiento }}</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-body d-grid gap-2">
+          {% if detalles %}
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-receipt"></i> Emitir presupuesto
+          </button>
+          {% else %}
+          <div class="alert" style="background:var(--color-celeste);border:none;color:#0369a1;font-size:13px;">
+            <i class="bi bi-info-circle me-1"></i>
+            No hay ítems pendientes disponibles para presupuestar.
+          </div>
+          {% endif %}
+          <a href="{% url 'tratamientos:plan_detalle' plan.id_plan_tratamiento %}" class="btn btn-outline">
+            Cancelar
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  function calcularTotales() {
+    let bruto = 0;
+    document.querySelectorAll('.item-check:checked').forEach(ch => {
+      bruto += parseFloat(ch.dataset.subtotal) || 0;
+    });
+    const descuento = parseFloat(document.getElementById('descuento').value) || 0;
+    const total = Math.max(0, bruto - descuento);
+
+    const fmt = n => '$' + Math.round(n).toLocaleString('es-CL');
+    document.getElementById('bruto-display').textContent = fmt(bruto);
+    document.getElementById('descuento-display').textContent = fmt(descuento);
+    document.getElementById('total-display').textContent = fmt(total);
+  }
+
+  function toggleTodos(checked) {
+    const checks = document.querySelectorAll('.item-check');
+    if (checked === undefined) {
+      const allChecked = [...checks].every(c => c.checked);
+      checks.forEach(c => c.checked = !allChecked);
+      document.getElementById('check-all').checked = !allChecked;
+    } else {
+      checks.forEach(c => c.checked = checked);
+    }
+    calcularTotales();
+  }
+
+  // Calcular al cargar
+  document.addEventListener('DOMContentLoaded', calcularTotales);
+</script>
+{% endblock %}

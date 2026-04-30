@@ -1,0 +1,50 @@
+<!-- templates/caja/lista.html -->
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Caja — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Gestión de Caja{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Cajas</h1>
+    <p class="page-subtitle">Historial de aperturas y cierres de caja</p>
+  </div>
+  <a href="{% url 'caja:abrir' %}" class="btn btn-primary"><i class="bi bi-cash-coin"></i> Abrir caja</a>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table class="alba-table">
+      <thead>
+        <tr><th>#</th><th>Apertura</th><th>Cierre</th><th>Monto inicial</th><th>Monto final</th><th>Usuario</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for caja in cajas %}
+        <tr>
+          <td style="font-weight:700;">{{ caja.id_caja }}</td>
+          <td>{{ caja.fecha_apertura|date:"d/m/Y H:i" }}</td>
+          <td>{{ caja.fecha_cierre|date:"d/m/Y H:i"|default:"—" }}</td>
+          <td>{{ caja.monto_inicial|pesos_cl }}</td>
+          <td>{{ caja.monto_final|pesos_cl|default:"—" }}</td>
+          <td style="font-size:13px;">{{ caja.id_usuario_apertura.nombre_completo }}</td>
+          <td><span class="badge-estado {{ caja.estado_caja }}">{{ caja.estado_caja }}</span></td>
+          <td>
+            <a href="{% url 'caja:detalle' caja.id_caja %}" class="btn btn-outline btn-sm"><i class="bi bi-eye"></i></a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="8">
+          <div class="empty-state" style="padding:40px;">
+            <div class="empty-state-icon">💰</div>
+            <div class="empty-state-title">Sin cajas registradas</div>
+            <a href="{% url 'caja:abrir' %}" class="btn btn-primary mt-3">Abrir primera caja</a>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if cajas %}<div class="card-body pt-0">{% include 'partials/_pagination.html' %}</div>{% endif %}
+</div>
+{% endblock %}

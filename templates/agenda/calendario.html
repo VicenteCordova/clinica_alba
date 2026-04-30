@@ -1,0 +1,166 @@
+﻿{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Agenda — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Agenda Clínica{% endblock %}
+{% block breadcrumb %}<a href="{% url 'dashboard:index' %}">Inicio</a><span class="breadcrumb-sep">/</span>Agenda{% endblock %}
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css" rel="stylesheet">
+<style>
+.fc { font-family: var(--font-sans); font-size: 13px; }
+.fc .fc-toolbar-title { font-size:16px; font-weight:700; color:var(--color-texto); }
+.fc .fc-button-primary { background:var(--color-acento); border-color:var(--color-acento); border-radius:var(--radius-sm); font-size:12px; }
+.fc .fc-button-primary:hover { background:var(--color-acento-hover); border-color:var(--color-acento-hover); }
+.fc .fc-button-primary:not(:disabled).fc-button-active { background:var(--color-acento-deep); border-color:var(--color-acento-deep); }
+.fc .fc-event { border-radius:var(--radius-sm); font-size:12px; cursor:pointer; border:none !important; padding:2px 4px; }
+.fc .fc-day-today { background:var(--color-acento-light) !important; }
+.fc .fc-timegrid-slot { font-size:11px; }
+</style>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Agenda Clínica</h1>
+    <p class="page-subtitle">Calendario de citas y gestión de horarios</p>
+  </div>
+  <a href="{% url 'agenda:crear_cita' %}" class="btn btn-clinical"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Nueva cita</a>
+</div>
+
+<!-- Filtros como pills -->
+<div class="card mb-4">
+  <div class="card-body" style="padding:14px 20px;">
+    <div class="d-flex gap-3 flex-wrap align-items-center">
+      <div class="d-flex align-items-center gap-2">
+        <label for="filtro-odontologo" style="font-size:12px;font-weight:600;white-space:nowrap;color:var(--color-texto-suave);">Odontólogo:</label>
+        <select id="filtro-odontologo" class="form-select" style="max-width:200px;font-size:13px;" aria-label="Filtrar por odontólogo">
+          <option value="">Todos</option>
+          {% for od in odontologos %}
+          <option value="{{ od.id_odontologo }}">Dr(a). {{ od.nombre_completo }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <label for="filtro-box" style="font-size:12px;font-weight:600;white-space:nowrap;color:var(--color-texto-suave);">Box:</label>
+        <select id="filtro-box" class="form-select" style="max-width:140px;font-size:13px;" aria-label="Filtrar por box">
+          <option value="">Todos</option>
+          {% for b in boxes %}
+          <option value="{{ b.id_box }}">{{ b.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <label for="filtro-estado" style="font-size:12px;font-weight:600;white-space:nowrap;color:var(--color-texto-suave);">Estado:</label>
+        <select id="filtro-estado" class="form-select" style="max-width:160px;font-size:13px;" aria-label="Filtrar por estado">
+          <option value="">Todos</option>
+          {% for e in estados %}
+          <option value="{{ e.nombre }}">{{ e.nombre }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-outline btn-sm" id="btn-refrescar" aria-label="Refrescar agenda">
+        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Refrescar
+      </button>
+    </div>
+
+    <!-- Leyenda de estados -->
+    <div class="d-flex flex-wrap gap-3 mt-3 pt-3" style="border-top:1px solid var(--color-borde);" role="note" aria-label="Leyenda de estados de cita">
+      <span style="font-size:11px;font-weight:700;color:var(--color-texto-suave);text-transform:uppercase;letter-spacing:.04em;align-self:center;">Estados:</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#f59e0b;" aria-hidden="true"></span><span class="badge-estado pendiente" style="font-size:10px;">Pendiente</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#7c3aed;" aria-hidden="true"></span><span class="badge-estado confirmada" style="font-size:10px;">Confirmada</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#ea580c;" aria-hidden="true"></span><span class="badge-estado en_espera" style="font-size:10px;">En espera</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#0369a1;" aria-hidden="true"></span><span class="badge-estado en_atencion" style="font-size:10px;">En atención</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#059669;" aria-hidden="true"></span><span class="badge-estado atendida" style="font-size:10px;">Atendida</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#dc2626;" aria-hidden="true"></span><span class="badge-estado cancelada" style="font-size:10px;">Cancelada</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#64748b;" aria-hidden="true"></span><span class="badge-estado no_asistio" style="font-size:10px;">No asistió</span></span>
+    </div>
+  </div>
+</div>
+
+<!-- Calendario -->
+<div class="card">
+  <div class="card-body">
+    <div id="calendar" role="application" aria-label="Calendario de citas clínicas"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/locales/es.global.min.js"></script>
+<script>
+let calendar;
+const BASE_URL = "{% url 'agenda:citas_json' %}";
+const ESTADO_COLORS = {
+  pendiente:   { bg:"#fef3c7", text:"#92400e" },
+  confirmada:  { bg:"#ede9ff", text:"#5b21b6" },
+  en_espera:   { bg:"#fde8d8", text:"#9a3412" },
+  en_atencion: { bg:"#d9f0ff", text:"#0369a1" },
+  atendida:    { bg:"#dff7ea", text:"#065f46" },
+  cancelada:   { bg:"#fee2e2", text:"#991b1b" },
+  no_asistio:  { bg:"#f1f5f9", text:"#475569" },
+  reagendada:  { bg:"#ede9ff", text:"#5b21b6" },
+};
+
+function getFilters() {
+  return {
+    odontologo: document.getElementById("filtro-odontologo").value,
+    box: document.getElementById("filtro-box").value,
+    estado: document.getElementById("filtro-estado").value,
+  };
+}
+
+function buildUrl() {
+  const f = getFilters();
+  const p = new URLSearchParams();
+  if (f.odontologo) p.set("odontologo", f.odontologo);
+  if (f.box) p.set("box", f.box);
+  if (f.estado) p.set("estado", f.estado);
+  return `${BASE_URL}?${p}`;
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+  const el = document.getElementById("calendar");
+  calendar = new FullCalendar.Calendar(el, {
+    locale: "es",
+    initialView: "timeGridWeek",
+    headerToolbar: {
+      left: "prev,next today",
+      center: "title",
+      right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+    },
+    buttonText: { listWeek: "Lista" },
+    slotMinTime: "07:00:00",
+    slotMaxTime: "21:00:00",
+    allDaySlot: false,
+    height: "auto",
+    events: buildUrl(),
+    eventDidMount: function(info) {
+      const estado = info.event.extendedProps.estado || "pendiente";
+      const colors = ESTADO_COLORS[estado] || { bg:"#e5e7eb", text:"#374151" };
+      info.el.style.backgroundColor = colors.bg;
+      info.el.style.color = colors.text;
+      info.el.style.borderLeft = `3px solid ${colors.text}`;
+      // Tooltip accesible
+      info.el.setAttribute("title", `${info.event.title} | ${estado.replace("_"," ")} | Box: ${info.event.extendedProps.box || "-"}`);
+      info.el.setAttribute("aria-label", `Cita de ${info.event.title}, estado ${estado}, box ${info.event.extendedProps.box || "no asignado"}`);
+    },
+    eventClick: function(info) {
+      const url = info.event.extendedProps.url;
+      if (url) window.location.href = url;
+    },
+  });
+  calendar.render();
+
+  ["filtro-odontologo","filtro-box","filtro-estado"].forEach(id => {
+    document.getElementById(id).addEventListener("change", () => {
+      calendar.removeAllEventSources();
+      calendar.addEventSource(buildUrl());
+    });
+  });
+  document.getElementById("btn-refrescar").addEventListener("click", () => {
+    calendar.removeAllEventSources();
+    calendar.addEventSource(buildUrl());
+    if (window.Alba) window.Alba.showToast("Agenda actualizada.", "info", 2500);
+  });
+});
+</script>
+{% endblock %}

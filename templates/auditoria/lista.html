@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Bitacora - {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Bitacora del sistema{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Bitacora de auditoria</h1>
+    <p class="page-subtitle">Trazabilidad clinica, financiera y de seguridad</p>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body" style="padding:14px 20px;">
+    <form method="get" class="d-flex gap-3 flex-wrap align-items-center">
+      <div class="search-box" style="flex:1;min-width:200px;">
+        <i class="bi bi-search" style="color:var(--color-texto-muy-suave);"></i>
+        <input type="search" name="q" value="{{ request.GET.q }}" placeholder="Buscar en descripcion...">
+      </div>
+      <select name="modulo" class="form-select" style="max-width:180px;">
+        <option value="">Todos los modulos</option>
+        {% for mod in modulos_disponibles %}
+        <option value="{{ mod }}" {% if request.GET.modulo == mod %}selected{% endif %}>{{ mod }}</option>
+        {% endfor %}
+      </select>
+      <select name="accion" class="form-select" style="max-width:200px;">
+        <option value="">Todas las acciones</option>
+        {% for ac in acciones_disponibles %}
+        <option value="{{ ac }}" {% if request.GET.accion == ac %}selected{% endif %}>{{ ac }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrar</button>
+      <a href="{% url 'auditoria:lista' %}" class="btn btn-outline"><i class="bi bi-x"></i></a>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table class="alba-table audit-table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Usuario / rol</th>
+          <th>Modulo</th>
+          <th>Accion</th>
+          <th>Paciente</th>
+          <th>Cita</th>
+          <th>Objeto</th>
+          <th>IP</th>
+          <th>Descripcion</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for reg in registros %}
+        <tr>
+          <td style="white-space:nowrap;font-size:12px;">{{ reg.fecha_evento|date:"d/m/Y H:i:s" }}</td>
+          <td>
+            <div style="font-weight:600;font-size:13px;">{{ reg.id_usuario.username }}</div>
+            <div class="text-muted" style="font-size:11px;">{{ reg.rol_usuario|default:"-" }}</div>
+          </td>
+          <td><span class="audit-chip chip-blue">{{ reg.modulo }}</span></td>
+          <td><span class="audit-chip chip-purple">{{ reg.accion }}</span></td>
+          <td style="font-size:12px;">{% if reg.paciente %}{{ reg.paciente.nombre_completo }}{% else %}-{% endif %}</td>
+          <td style="font-family:monospace;font-size:12px;">{% if reg.cita_id %}#{{ reg.cita_id }}{% else %}-{% endif %}</td>
+          <td style="font-family:monospace;font-size:12px;">{{ reg.tabla_afectada }} #{{ reg.id_registro_afectado }}</td>
+          <td style="font-size:12px;">{{ reg.ip_origen|default:"-" }}</td>
+          <td style="font-size:12px;color:var(--color-texto-suave);">{{ reg.descripcion|default:"-"|truncatechars:100 }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="9">
+          <div class="empty-state" style="padding:40px;">
+            <div class="empty-state-title">Sin registros de auditoria</div>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if registros %}<div class="card-body pt-0">{% include 'partials/_pagination.html' %}</div>{% endif %}
+</div>
+{% endblock %}

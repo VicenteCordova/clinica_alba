@@ -1,0 +1,43 @@
+<!-- templates/caja/abrir.html -->
+{% extends 'base.html' %}
+{% block title %}Abrir caja — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Apertura de caja{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Apertura de caja</h1>
+    <p class="page-subtitle">Inicia el turno de caja con el monto inicial disponible</p>
+  </div>
+  <a href="{% url 'caja:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+</div>
+
+{% if caja_abierta %}
+<div class="alert alert-warning">
+  <i class="bi bi-exclamation-triangle"></i>
+  Ya tienes una caja abierta: <strong>Caja #{{ caja_abierta.id_caja }}</strong> — abierta el {{ caja_abierta.fecha_apertura|date:"d/m/Y H:i" }}.
+  <a href="{% url 'caja:detalle' caja_abierta.id_caja %}" class="btn btn-outline btn-sm ms-2">Ir a la caja</a>
+</div>
+{% else %}
+<div class="row">
+  <div class="col-md-5">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-cash-coin me-2"></i>Datos de apertura</h2></div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+          <div class="form-group">
+            <label class="form-label">Monto inicial en caja ($)</label>
+            {{ form.monto_inicial }}
+            <div class="form-text">Ingresa el efectivo disponible al inicio del turno.</div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg w-100">
+            <i class="bi bi-lock-fill"></i> Abrir caja
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

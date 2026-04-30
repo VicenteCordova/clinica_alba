@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+{% block title %}Detalle de Examen - {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Detalle de Examen Imagenologico{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+  <div>
+    <h1 class="page-title">{{ examen.tipo_examen.nombre }}</h1>
+    <p class="page-subtitle">Paciente: <a href="{% url 'pacientes:detalle' examen.paciente_id %}">{{ examen.paciente.nombre_completo }}</a></p>
+  </div>
+  <div>
+    <a href="{% url 'imagenologia:editar' examen.id_examen %}" class="btn btn-outline-primary me-2"><i class="bi bi-pencil"></i> Editar</a>
+    <a href="{% url 'imagenologia:paciente_lista' examen.paciente_id %}" class="btn btn-outline">Volver</a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-images me-2"></i>Archivos del estudio</h2></div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% for archivo in archivos %}
+          <div class="col-md-6">
+            <div class="image-file-card">
+              <div class="image-file-preview">
+                {% if archivo.extension == '.jpg' or archivo.extension == '.jpeg' or archivo.extension == '.png' %}
+                <img src="{% url 'imagenologia:ver_archivo' archivo.id_archivo %}" alt="{{ archivo.nombre_original }}">
+                {% elif archivo.extension == '.pdf' %}
+                <iframe src="{% url 'imagenologia:ver_archivo' archivo.id_archivo %}" title="{{ archivo.nombre_original }}"></iframe>
+                {% else %}
+                <div class="file-icon-preview"><i class="bi bi-file-earmark-medical"></i></div>
+                {% endif %}
+              </div>
+              <div class="p-3">
+                <div class="fw-bold text-truncate">{{ archivo.nombre_original }}</div>
+                <div class="text-muted small">{{ archivo.fecha_subida|date:"d/m/Y H:i" }} - {{ archivo.extension|upper }} - {{ archivo.peso_bytes|filesizeformat }}</div>
+                <div class="d-flex gap-2 mt-2">
+                  <a href="{% url 'imagenologia:ver_archivo' archivo.id_archivo %}" target="_blank" class="btn btn-outline btn-sm"><i class="bi bi-eye"></i> Ver</a>
+                  <a href="{% url 'imagenologia:descargar_archivo' archivo.id_archivo %}" class="btn btn-primary btn-sm"><i class="bi bi-download"></i> Descargar</a>
+                  <form action="{% url 'imagenologia:eliminar_archivo' archivo.id_archivo %}" method="post" class="d-inline" onsubmit="return confirm('Anular este archivo de forma logica?');">
+                    {% csrf_token %}
+                    <input type="hidden" name="motivo_anulacion" value="Adjunto anulado desde ficha clinica">
+                    <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+                  </form>
+                </div>
+                <form action="{% url 'imagenologia:reemplazar_archivo' archivo.id_archivo %}" method="post" enctype="multipart/form-data" class="mt-2">
+                  {% csrf_token %}
+                  <input type="hidden" name="motivo_anulacion" value="Adjunto reemplazado por version corregida">
+                  <div class="input-group input-group-sm">
+                    <input type="file" name="archivo_reemplazo" class="form-control" accept=".pdf,.jpg,.jpeg,.png,.zip,.dcm,.dicom" required>
+                    <button type="submit" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> Reemplazar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <div class="col-12 text-center text-muted p-4">No hay archivos adjuntos.</div>
+          {% endfor %}
+        </div>
+      </div>
+      <div class="card-footer">
+        <form action="{% url 'imagenologia:subir_archivo' examen.id_examen %}" method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+          {% csrf_token %}
+          <input type="file" name="archivos" class="form-control form-control-sm" multiple accept=".pdf,.jpg,.jpeg,.png,.zip,.dcm,.dicom" required>
+          <button type="submit" class="btn btn-sm btn-success text-nowrap"><i class="bi bi-upload"></i> Subir</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="alert alert-info d-flex align-items-center">
+      <i class="bi bi-info-circle-fill me-3 fs-4"></i>
+      <div>
+        <strong>DICOM preparado para integracion futura</strong><br>
+        Los archivos ZIP/DICOM quedan almacenados y asociados al paciente, sin activar todavia un visor OHIF/Orthanc.
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title">Informacion clinica</h2></div>
+      <div class="card-body small">
+        <p><strong>Fecha:</strong><br>{{ examen.fecha_examen|date:"d/m/Y" }}</p>
+        <p><strong>Centro radiologico:</strong><br>{{ examen.centro_radiologico|default:"-" }}</p>
+        <p><strong>Descripcion:</strong><br>{{ examen.descripcion|default:"-" }}</p>
+        <p><strong>Observacion clinica:</strong><br>{{ examen.observacion_clinica|default:"-" }}</p>
+        {% if examen.cita %}<p><strong>Cita asociada:</strong><br>#{{ examen.cita_id }} - {{ examen.cita.fecha_hora_inicio|date:"d/m/Y H:i" }}</p>{% endif %}
+        {% if examen.evolucion %}<p><strong>Evolucion asociada:</strong><br>#{{ examen.evolucion_id }}</p>{% endif %}
+        <p><strong>Subido por:</strong><br>{{ examen.creado_por.nombre_completo }}</p>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header"><h2 class="card-title">Observaciones</h2></div>
+      <div class="card-body p-0">
+        <ul class="list-group list-group-flush" style="max-height: 300px; overflow-y: auto;">
+          {% for obs in observaciones %}
+          <li class="list-group-item">
+            <small class="text-muted d-block mb-1">{{ obs.fecha_observacion|date:"d/m/Y H:i" }} - {{ obs.usuario.nombre_completo|default:obs.usuario.username }}</small>
+            <p class="mb-0 small">{{ obs.observacion|linebreaksbr }}</p>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-center text-muted p-3">Sin observaciones.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      <div class="card-footer">
+        <form action="{% url 'imagenologia:crear_observacion' examen.id_examen %}" method="post">
+          {% csrf_token %}
+          <div class="input-group">
+            <input type="text" name="observacion" class="form-control form-control-sm" placeholder="Anadir observacion..." required>
+            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-send"></i></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

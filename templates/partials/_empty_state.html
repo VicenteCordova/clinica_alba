@@ -1,0 +1,13 @@
+﻿{# _empty_state.html — uso: {% include 'partials/_empty_state.html' with icon="📅" title="..." desc="..." cta_url="..." cta_label="..." %} #}
+<div class="empty-state">
+  <div class="empty-state-icon" aria-hidden="true">{{ icon|default:"📋" }}</div>
+  <div class="empty-state-title">{{ title|default:"Sin registros" }}</div>
+  {% if desc %}
+  <p class="empty-state-desc">{{ desc }}</p>
+  {% endif %}
+  {% if cta_url and cta_label %}
+  <a href="{{ cta_url }}" class="btn btn-primary mt-2">
+    <i class="bi bi-plus" aria-hidden="true"></i> {{ cta_label }}
+  </a>
+  {% endif %}
+</div>

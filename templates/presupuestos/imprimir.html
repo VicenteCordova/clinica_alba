@@ -1,0 +1,103 @@
+<!-- templates/presupuestos/imprimir.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Presupuesto {{ presupuesto.numero_presupuesto }}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; font-size: 13px; color: #334155; padding: 40px; background: white; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 32px; padding-bottom: 20px; border-bottom: 2px solid #7c88ff; }
+    .logo-area h1 { font-size: 22px; font-weight: 800; color: #7c88ff; }
+    .logo-area p { font-size: 12px; color: #64748b; }
+    .doc-info { text-align: right; }
+    .doc-info .num { font-size: 18px; font-weight: 700; color: #334155; }
+    .doc-info .date { font-size: 12px; color: #64748b; }
+    .badge { background: #dff7ea; color: #065f46; padding: 4px 14px; border-radius: 99px; font-size: 12px; font-weight: 700; display: inline-block; }
+    .section { margin-bottom: 24px; }
+    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; margin-bottom: 8px; }
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .info-item label { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 2px; }
+    .info-item span { font-weight: 600; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+    th { background: #eef0ff; color: #5b21b6; font-size: 11px; text-transform: uppercase; padding: 8px 12px; text-align: left; letter-spacing: .04em; }
+    td { padding: 9px 12px; border-bottom: 1px solid #e5e7eb; }
+    .total-row td { font-weight: 800; font-size: 15px; background: #dff7ea; color: #065f46; }
+    .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e5e7eb; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; }
+    @media print { body { padding: 20px; } .no-print { display: none; } }
+  </style>
+</head>
+<body>
+
+<div class="no-print" style="margin-bottom:20px;">
+  <button onclick="window.print()" style="padding:8px 16px;background:#7c88ff;color:white;border:none;border-radius:8px;cursor:pointer;font-family:inherit;">🖨️ Imprimir</button>
+  <button onclick="window.close()" style="margin-left:8px;padding:8px 16px;background:#f1f5f9;border:none;border-radius:8px;cursor:pointer;font-family:inherit;">✕ Cerrar</button>
+</div>
+
+<div class="header">
+  <div class="logo-area">
+    <h1>🦷 Clínica El Alba</h1>
+    <p>Sistema de Gestión Odontológica</p>
+  </div>
+  <div class="doc-info">
+    <div class="num">{{ presupuesto.numero_presupuesto }}</div>
+    <div class="date">Emitido: {{ presupuesto.fecha_emision|date:"d/m/Y" }}</div>
+    {% if presupuesto.fecha_vencimiento %}
+    <div class="date">Vence: {{ presupuesto.fecha_vencimiento|date:"d/m/Y" }}</div>
+    {% endif %}
+    <div style="margin-top:6px;"><span class="badge">{{ presupuesto.estado_presupuesto }}</span></div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Información del paciente</div>
+  <div class="info-grid">
+    <div class="info-item">
+      <label>Nombre</label>
+      <span>{{ presupuesto.id_plan_tratamiento.id_ficha_clinica.id_paciente.nombre_completo }}</span>
+    </div>
+    <div class="info-item">
+      <label>RUT</label>
+      <span>{{ presupuesto.id_plan_tratamiento.id_ficha_clinica.id_paciente.rut }}</span>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <div class="section-title">Ítems del presupuesto</div>
+  <table>
+    <thead>
+      <tr><th>Descripción</th><th>Cantidad</th><th>Precio unit.</th><th>Subtotal</th></tr>
+    </thead>
+    <tbody>
+      {% for d in presupuesto.detalles.all %}
+      <tr>
+        <td>{{ d.descripcion_item }}</td>
+        <td>{{ d.cantidad }}</td>
+        <td>${{ d.precio_unitario|floatformat:0 }}</td>
+        <td>${{ d.subtotal|floatformat:0 }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      {% if presupuesto.descuento_total %}
+      <tr>
+        <td colspan="3" style="text-align:right;font-weight:600;">Descuento</td>
+        <td style="color:#dc2626;">−${{ presupuesto.descuento_total|floatformat:0 }}</td>
+      </tr>
+      {% endif %}
+      <tr class="total-row">
+        <td colspan="3" style="text-align:right;">TOTAL</td>
+        <td>${{ presupuesto.monto_final|floatformat:0 }}</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="footer">
+  <span>Emitido por: {{ presupuesto.id_usuario_emite.nombre_completo }}</span>
+  <span>Clínica Odontológica El Alba</span>
+</div>
+</body>
+</html>

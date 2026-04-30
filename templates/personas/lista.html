@@ -1,0 +1,65 @@
+<!-- templates/personas/lista.html -->
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Personas — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Personas{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Personas</h1>
+    <p class="page-subtitle">{{ paginator.count }} persona{{ paginator.count|pluralize }} registrada{{ paginator.count|pluralize }}</p>
+  </div>
+  <a href="{% url 'personas:crear' %}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Nueva persona</a>
+</div>
+
+<div class="card mb-4">
+  <div class="card-body" style="padding: 14px 20px;">
+    <form method="get" class="d-flex gap-3 align-items-center">
+      <div class="search-box" style="flex: 1;">
+        <i class="bi bi-search" style="color: var(--color-texto-muy-suave);"></i>
+        <input type="search" name="q" value="{{ q }}" placeholder="Buscar por RUT o nombre...">
+      </div>
+      <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Buscar</button>
+      {% if q %}<a href="{% url 'personas:lista' %}" class="btn btn-outline"><i class="bi bi-x"></i> Limpiar</a>{% endif %}
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table class="alba-table">
+      <thead>
+        <tr>
+          <th>RUT</th><th>Nombre completo</th><th>Correo</th><th>Teléfono</th><th>Estado</th><th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for persona in personas %}
+        <tr>
+          <td style="font-family: monospace;">{{ persona.rut|rut_format }}</td>
+          <td><strong>{{ persona.nombre_completo }}</strong></td>
+          <td style="font-size: 13px;">{{ persona.correo|default:"—" }}</td>
+          <td style="font-size: 13px;">{{ persona.telefono|default:"—" }}</td>
+          <td><span class="badge-estado {{ persona.estado_persona }}">{{ persona.estado_persona }}</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'personas:detalle' persona.id_persona %}" class="btn btn-outline btn-sm" title="Ver"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'personas:editar' persona.id_persona %}" class="btn btn-outline btn-sm" title="Editar"><i class="bi bi-pencil"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">
+          <div class="empty-state">
+            <div class="empty-state-icon">👤</div>
+            <div class="empty-state-title">{% if q %}Sin resultados para "{{ q }}"{% else %}Sin personas registradas{% endif %}</div>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if personas %}<div class="card-body pt-0">{% include 'partials/_pagination.html' %}</div>{% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,175 @@
+﻿{% extends 'base.html' %}
+{% load core_tags humanize %}
+
+{% block title %}Dashboard — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Dashboard General{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Buenos días, {{ request.user.nombre_completo|truncatewords:2 }} 👋</h1>
+    <p class="page-subtitle">Resumen operacional — {% now "l, d \d\e F \d\e Y" %}</p>
+  </div>
+  <div class="d-flex gap-2 flex-wrap">
+    {% if caja_usuario %}
+    <a href="{% url 'caja:lista' %}" class="badge-estado activa" style="font-size:12px;padding:6px 14px;text-decoration:none;">
+      <i class="bi bi-cash-coin me-1" aria-hidden="true"></i> Caja #{{ caja_usuario.id_caja }} abierta
+    </a>
+    {% else %}
+    <a href="{% url 'caja:abrir' %}" class="btn btn-outline">
+      <i class="bi bi-cash-coin" aria-hidden="true"></i> Abrir caja
+    </a>
+    {% endif %}
+    <a href="{% url 'agenda:crear_cita' %}" class="btn btn-primary">
+      <i class="bi bi-calendar-plus" aria-hidden="true"></i> Nueva cita
+    </a>
+  </div>
+</div>
+
+<!-- KPIs -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-celeste kpi-card-clinical">
+    <div class="kpi-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ citas_hoy }}</div>
+    <div class="kpi-label">Citas hoy</div>
+  </div>
+  <div class="kpi-card kpi-menta kpi-card-success">
+    <div class="kpi-icon"><i class="bi bi-person-check" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ atendidos_hoy }}</div>
+    <div class="kpi-label">Atendidos hoy</div>
+  </div>
+  <div class="kpi-card kpi-lavanda">
+    <div class="kpi-icon"><i class="bi bi-person-badge" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ odontologos_activos }}</div>
+    <div class="kpi-label">Odontólogos activos</div>
+  </div>
+  <div class="kpi-card kpi-rosa">
+    <div class="kpi-icon"><i class="bi bi-receipt" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ presupuestos_vigentes }}</div>
+    <div class="kpi-label">Presupuestos vigentes</div>
+  </div>
+  <div class="kpi-card kpi-amarillo">
+    <div class="kpi-icon"><i class="bi bi-cash" aria-hidden="true"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ pagos_hoy|pesos_cl }}</div>
+    <div class="kpi-label">Recaudado hoy</div>
+  </div>
+  <div class="kpi-card {% if caja_usuario %}kpi-menta kpi-card-success{% else %}kpi-rosa kpi-card-danger{% endif %}">
+    <div class="kpi-icon"><i class="bi bi-{% if caja_usuario %}lock-fill{% else %}cash-stack{% endif %}" aria-hidden="true"></i></div>
+    <div class="kpi-value" style="font-size:16px;">{% if caja_usuario %}Abierta{% else %}Sin caja{% endif %}</div>
+    <div class="kpi-label">Estado de caja</div>
+  </div>
+</div>
+
+<div class="row g-4">
+  <!-- Próximas citas -->
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Citas próximas</h2>
+        <a href="{% url 'agenda:calendario' %}" class="btn btn-outline btn-sm">
+          <i class="bi bi-calendar" aria-hidden="true"></i> Ver agenda completa
+        </a>
+      </div>
+      <div class="card-body p-0">
+        {% if proximas_citas %}
+        <div class="table-wrapper" style="border:none;border-radius:0;">
+          <table class="alba-table" aria-label="Tabla de próximas citas">
+            <thead>
+              <tr>
+                <th>Paciente</th><th>Odontólogo</th><th>Hora</th><th>Box</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for cita in proximas_citas %}
+              <tr>
+                <td data-label="Paciente">
+                  <a href="{% url 'pacientes:detalle' cita.id_paciente_id %}" style="color:var(--color-texto);font-weight:600;text-decoration:none;">
+                    {{ cita.id_paciente.nombre_completo }}
+                  </a>
+                  <div style="font-size:11px;color:var(--color-texto-muy-suave);">{{ cita.id_paciente.rut|rut_format }}</div>
+                </td>
+                <td data-label="Odontólogo" style="font-size:13px;">{{ cita.id_odontologo.nombre_completo }}</td>
+                <td data-label="Hora">
+                  <strong>{{ cita.fecha_hora_inicio|date:"H:i" }}</strong>
+                  <div style="font-size:11px;color:var(--color-texto-muy-suave);">{{ cita.fecha_hora_inicio|date:"d/m/Y" }}</div>
+                </td>
+                <td data-label="Box" style="font-size:13px;">{{ cita.id_box.nombre }}</td>
+                <td data-label="Estado">
+                  <span class="badge-estado {{ cita.id_estado_cita.nombre }}">{{ cita.id_estado_cita.get_nombre_display|default:cita.id_estado_cita.nombre }}</span>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        {% include 'partials/_empty_state.html' with icon="📅" title="Sin citas próximas" desc="No hay citas agendadas para hoy o mañana." cta_url='/agenda/citas/nueva/' cta_label="Nueva cita" %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Accesos rápidos + Gráfico -->
+  <div class="col-lg-4">
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-lightning me-2" aria-hidden="true"></i>Acceso rápido</h2>
+      </div>
+      <div class="card-body d-grid gap-2">
+        <a href="{% url 'agenda:crear_cita' %}" class="btn btn-clinical">
+          <i class="bi bi-calendar-plus" aria-hidden="true"></i> Nueva cita
+        </a>
+        <a href="{% url 'pacientes:crear' %}" class="btn btn-outline">
+          <i class="bi bi-person-plus" aria-hidden="true"></i> Nuevo paciente
+        </a>
+        <a href="{% url 'caja:lista' %}" class="btn btn-outline">
+          <i class="bi bi-cash-stack" aria-hidden="true"></i> Ir a caja
+        </a>
+        <a href="{% url 'presupuestos:lista' %}" class="btn btn-outline">
+          <i class="bi bi-receipt" aria-hidden="true"></i> Presupuestos
+        </a>
+        <a href="{% url 'auditoria:lista' %}" class="btn btn-ghost btn-sm">
+          <i class="bi bi-journal-text" aria-hidden="true"></i> Bitácora del sistema
+        </a>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-pie-chart me-2" aria-hidden="true"></i>Citas 7 días</h2>
+      </div>
+      <div class="card-body">
+        <canvas id="chartCitasSemana" height="200" aria-label="Gráfico de citas por estado en los últimos 7 días" role="img"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const citasData = {{ citas_semana_json|safe }};
+const labels = citasData.map(d => d.id_estado_cita__nombre || 'Sin estado');
+const valores = citasData.map(d => d.total);
+new Chart(document.getElementById('chartCitasSemana'), {
+  type: 'doughnut',
+  data: {
+    labels: labels,
+    datasets: [{
+      data: valores,
+      backgroundColor: ['#d9f0ff','#ede9ff','#fde8d8','#dff7ea','#fee2e2','#f1f5f9'],
+      borderColor: ['#2F80A6','#5b21b6','#9a3412','#065f46','#991b1b','#475569'],
+      borderWidth: 2,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 }, padding: 14 } }
+    },
+    cutout: '65%',
+  }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,119 @@
+<!-- templates/agenda/cita_form.html -->
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block title %}{{ titulo }} — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}{{ titulo }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ titulo }}</h1>
+    <p class="page-subtitle">Completa los datos para agendar la cita</p>
+  </div>
+  <a href="{% url 'agenda:calendario' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver al calendario</a>
+</div>
+
+<div class="row">
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header"><h2 class="card-title"><i class="bi bi-calendar-plus me-2"></i>Datos de la cita</h2></div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Paciente <span style="color:#ef4444;">*</span></label>
+                {% render_field form.id_paciente %}
+                {% if form.id_paciente.errors %}<div class="invalid-feedback d-block">{{ form.id_paciente.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Odontólogo <span style="color:#ef4444;">*</span></label>
+                {% render_field form.id_odontologo %}
+                {% if form.id_odontologo.errors %}<div class="invalid-feedback d-block">{{ form.id_odontologo.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Box <span style="color:#ef4444;">*</span></label>
+                {% render_field form.id_box %}
+                {% if form.id_box.errors %}<div class="invalid-feedback d-block">{{ form.id_box.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Tipo de atención <span style="color:#ef4444;">*</span></label>
+                {% render_field form.id_tipo_atencion %}
+                {% if form.id_tipo_atencion.errors %}<div class="invalid-feedback d-block">{{ form.id_tipo_atencion.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Fecha y hora de inicio <span style="color:#ef4444;">*</span></label>
+                {% render_field form.fecha_hora_inicio %}
+                {% if form.fecha_hora_inicio.errors %}<div class="invalid-feedback d-block">{{ form.fecha_hora_inicio.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Fecha y hora de fin <span style="color:#ef4444;">*</span></label>
+                {% render_field form.fecha_hora_fin %}
+                {% if form.fecha_hora_fin.errors %}<div class="invalid-feedback d-block">{{ form.fecha_hora_fin.errors.as_text }}</div>{% endif %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Estado</label>
+                {% render_field form.id_estado_cita %}
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="form-group">
+                <label class="form-label">Motivo de consulta</label>
+                {% render_field form.motivo_consulta placeholder="Ej: Control, dolor molar..." %}
+              </div>
+            </div>
+            <div class="col-12">
+              <div class="form-group">
+                <label class="form-label">Observaciones</label>
+                {% render_field form.observaciones rows="3" %}
+              </div>
+            </div>
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger mt-3">
+            <i class="bi bi-exclamation-circle"></i> {{ form.non_field_errors.as_text }}
+          </div>
+          {% endif %}
+
+          <div class="d-flex gap-2 mt-3">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="bi bi-calendar-check"></i> Confirmar cita
+            </button>
+            <a href="{% url 'agenda:calendario' %}" class="btn btn-outline">Cancelar</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card" style="background:var(--color-celeste);border-color:transparent;">
+      <div class="card-body">
+        <h3 style="font-size:14px;font-weight:700;margin-bottom:10px;">
+          <i class="bi bi-info-circle me-1"></i>Reglas de agendamiento
+        </h3>
+        <ul style="font-size:13px;color:var(--color-texto);padding-left:16px;line-height:1.9;margin:0;">
+          <li>No se permiten solapamientos de horario</li>
+          <li>El odontólogo no puede estar en dos citas a la vez</li>
+          <li>El box no puede usarse simultáneamente</li>
+          <li>Citas canceladas y reprogramadas liberan el horario</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,56 @@
+<!-- templates/presupuestos/lista.html -->
+{% extends 'base.html' %}
+{% load core_tags %}
+{% block title %}Presupuestos — {{ CLINICA_NOMBRE }}{% endblock %}
+{% block topbar_title %}Presupuestos{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Presupuestos</h1>
+    <p class="page-subtitle">{{ paginator.count }} presupuesto{{ paginator.count|pluralize }}</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrapper">
+    <table class="alba-table">
+      <thead>
+        <tr><th>N° Presupuesto</th><th>Paciente</th><th>Emisión</th><th>Monto final</th><th>Saldo</th><th>Estado</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for p in presupuestos %}
+        <tr>
+          <td style="font-family:monospace;font-weight:700;">{{ p.numero_presupuesto }}</td>
+          <td>
+            <a href="{% url 'pacientes:detalle' p.id_plan_tratamiento.id_ficha_clinica.id_paciente_id %}" style="color:var(--color-acento);text-decoration:none;font-weight:600;">
+              {{ p.id_plan_tratamiento.id_ficha_clinica.id_paciente.nombre_completo }}
+            </a>
+          </td>
+          <td>{{ p.fecha_emision|date:"d/m/Y" }}</td>
+          <td style="font-weight:700;">{{ p.monto_final|pesos_cl }}</td>
+          <td style="{% if p.saldo_pendiente > 0 %}color:#dc2626;{% else %}color:#059669;{% endif %}font-weight:600;">
+            {{ p.saldo_pendiente|pesos_cl }}
+          </td>
+          <td><span class="badge-estado {{ p.estado_presupuesto }}">{{ p.estado_presupuesto }}</span></td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{% url 'presupuestos:detalle' p.id_presupuesto %}" class="btn btn-outline btn-sm"><i class="bi bi-eye"></i></a>
+              <a href="{% url 'presupuestos:imprimir' p.id_presupuesto %}" class="btn btn-outline btn-sm" target="_blank"><i class="bi bi-printer"></i></a>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7">
+          <div class="empty-state" style="padding:40px;">
+            <div class="empty-state-icon">📄</div>
+            <div class="empty-state-title">Sin presupuestos</div>
+          </div>
+        </td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if presupuestos %}<div class="card-body pt-0">{% include 'partials/_pagination.html' %}</div>{% endif %}
+</div>
+{% endblock %}
