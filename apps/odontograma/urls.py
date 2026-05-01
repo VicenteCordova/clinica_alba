@@ -14,4 +14,5 @@ urlpatterns = [
     path("api/<int:odontograma_id>/pieza/<str:codigo_pieza>/superficie/", views.OdontogramaActualizarSuperficieAPIView.as_view(), name="api_superficie"),
     path("api/<int:odontograma_id>/pieza/<str:codigo_pieza>/raiz/", views.OdontogramaActualizarRaizAPIView.as_view(), name="api_raiz"),
     path("api/<int:odontograma_id>/pieza/<str:codigo_pieza>/periodonto/", views.OdontogramaActualizarPeriodontoAPIView.as_view(), name="api_periodonto"),
+    path("api/<int:odontograma_id>/enviar-plan/", views.OdontogramaEnviarPlanAPIView.as_view(), name="api_enviar_plan"),
 ]

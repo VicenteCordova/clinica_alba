@@ -57,6 +57,14 @@ def _condicion_key(nombre):
     return CONDICION_ALIASES.get(key, key)
 
 
+def _obtener_pieza(codigo_pieza):
+    pieza, _ = PiezaDental.objects.get_or_create(
+        pk=codigo_pieza,
+        defaults={"descripcion": f"Pieza {codigo_pieza}", "estado_pieza": "activo"}
+    )
+    return pieza
+
+
 def _cara_key(nombre):
     key = _normalizar(nombre)
     aliases = {
@@ -221,13 +229,52 @@ def _obtener_condicion(valor):
 
 def _estado_inicial(odontograma):
     estado = {}
-    for det in odontograma.detalles.all():
+    for det in odontograma.detalles.filter(estado_clinico__in=[
+        "condicion", "existente", "planificado", "en_tratamiento",
+        "completado", "ausente", "extraccion_indicada", "urgencia",
+    ]):
         pieza = str(det.codigo_pieza_dental_id)
-        estado.setdefault(pieza, {})[det.id_cara_dental.nombre] = _condicion_key(det.id_condicion.nombre)
+        cara_data = {
+            "condicion": _condicion_key(det.id_condicion.nombre),
+            "estado_clinico": det.estado_clinico,
+        }
+        estado.setdefault(pieza, {})[det.id_cara_dental.nombre] = cara_data
+    for det in odontograma.detalles.filter(estado_clinico="anulado"):
+        pieza = str(det.codigo_pieza_dental_id)
+        estado.setdefault(pieza, {}).setdefault("_anulados", []).append(
+            det.id_cara_dental.nombre
+        )
     for pieza in odontograma.piezas.all():
         key = str(pieza.codigo_pieza_dental_id)
         estado.setdefault(key, {})["_estado"] = pieza.estado_general
     return estado
+
+
+def _serializar_detalles(odontograma):
+    detalles = []
+    for det in odontograma.detalles.select_related(
+        "codigo_pieza_dental", "id_cara_dental", "id_condicion"
+    ).exclude(estado_clinico="anulado"):
+        detalles.append({
+            "pieza": str(det.codigo_pieza_dental_id),
+            "cara": det.id_cara_dental.nombre,
+            "condicion": det.id_condicion.nombre,
+            "condicion_key": _condicion_key(det.id_condicion.nombre),
+            "estado_clinico": det.estado_clinico,
+            "observacion": det.observacion or "",
+        })
+    return detalles
+
+
+def _serializar_piezas(odontograma):
+    piezas = []
+    for p in odontograma.piezas.select_related("codigo_pieza_dental").all():
+        piezas.append({
+            "pieza": str(p.codigo_pieza_dental_id),
+            "estado_general": p.estado_general,
+            "observacion": p.observacion or "",
+        })
+    return piezas
 
 
 def _registrar_historial(
@@ -241,7 +288,7 @@ def _registrar_historial(
 ):
     evolucion = odontograma.id_evolucion
     cita = evolucion.id_cita if evolucion else None
-    HistorialOdontograma.objects.create(
+    historial = HistorialOdontograma.objects.create(
         odontograma=odontograma,
         pieza_dental=pieza_dental,
         evolucion=evolucion,
@@ -252,6 +299,20 @@ def _registrar_historial(
         estado_anterior=estado_anterior,
         estado_nuevo=estado_nuevo,
     )
+    return historial
+
+def _serializar_historial_obj(h):
+    return {
+        "id": h.id,
+        "fecha": h.fecha.strftime("%Y-%m-%dT%H:%M:%S"),
+        "fecha_display": h.fecha.strftime("%d/%m/%Y %H:%M"),
+        "pieza": h.pieza_dental_id or "-",
+        "tipo": h.tipo_cambio,
+        "detalle": h.detalle_cambio,
+        "estado_anterior": h.estado_anterior or "-",
+        "estado_nuevo": h.estado_nuevo or "-",
+        "usuario": h.usuario.get_full_name() or h.usuario.username if h.usuario else "-"
+    }
 
 
 def _marcar_actualizado(odontograma, usuario):
@@ -357,11 +418,30 @@ class OdontogramaDetalleView(LoginRequeridoMixin, View):
 
         condiciones = CondicionOdontologica.objects.filter(
             estado_condicion="activo"
-        ).order_by("nombre")
+        ).order_by("categoria", "nombre")
+        
+        condiciones_list = []
+        for c in condiciones:
+            condiciones_list.append({
+                "id": c.id_condicion,
+                "nombre": c.nombre,
+                "categoria": c.categoria,
+                "categoria_display": c.get_categoria_display()
+            })
+
+        historial = odontograma.historial.select_related("usuario__id_persona").order_by("-fecha")
+        historial_list = [_serializar_historial_obj(h) for h in historial]
+
         return render(request, self.template_name, {
             "odontograma": odontograma,
+            "paciente": odontograma.id_ficha_clinica.id_paciente,
             "condiciones": condiciones,
+            "condiciones_json": json.dumps(condiciones_list),
             "estado_inicial": _estado_inicial(odontograma),
+            "estado_inicial_json": json.dumps(_estado_inicial(odontograma)),
+            "detalles_json": json.dumps(_serializar_detalles(odontograma)),
+            "piezas_json": json.dumps(_serializar_piezas(odontograma)),
+            "historial_json": json.dumps(historial_list),
             "puede_editar": puede_editar,
         })
 
@@ -462,7 +542,7 @@ class OdontogramaPiezaAPIView(LoginRequeridoMixin, View):
     def get(self, request, odontograma_id, codigo_pieza):
         odontograma = get_object_or_404(Odontograma, pk=odontograma_id)
         _validar_acceso_odontograma(request, odontograma, edicion=False)
-        pieza_dental = get_object_or_404(PiezaDental, pk=codigo_pieza)
+        pieza_dental = _obtener_pieza(codigo_pieza)
         pieza_obj = (
             OdontogramaPieza.objects.filter(
                 odontograma=odontograma,
@@ -483,9 +563,11 @@ class OdontogramaPiezaAPIView(LoginRequeridoMixin, View):
                 "cara_key": _cara_key(det.id_cara_dental.nombre),
                 "condicion": det.id_condicion.nombre,
                 "condicion_key": _condicion_key(det.id_condicion.nombre),
+                "estado_clinico": det.estado_clinico,
                 "observacion": det.observacion or "",
             }
             for det in detalles_superficie
+            if det.estado_clinico != "anulado"
         ]
 
         raices = []
@@ -552,7 +634,7 @@ class OdontogramaActualizarEstadoAPIView(LoginRequeridoMixin, View):
         _validar_acceso_odontograma(request, odontograma, edicion=True)
         try:
             data = _json_body(request)
-            pieza_dental = get_object_or_404(PiezaDental, pk=codigo_pieza)
+            pieza_dental = _obtener_pieza(codigo_pieza)
             estados_validos = dict(OdontogramaPieza.ESTADO_GENERAL_CHOICES)
             nuevo_estado = data.get("estado_general", "presente")
             observacion = (data.get("observacion") or "").strip()
@@ -570,7 +652,7 @@ class OdontogramaActualizarEstadoAPIView(LoginRequeridoMixin, View):
                     pieza_obj.estado_general = nuevo_estado
                     pieza_obj.observacion = observacion
                     pieza_obj.save()
-                    _registrar_historial(
+                    h_obj = _registrar_historial(
                         odontograma,
                         pieza_dental,
                         request.user,
@@ -580,7 +662,10 @@ class OdontogramaActualizarEstadoAPIView(LoginRequeridoMixin, View):
                         estado_nuevo=nuevo_estado,
                     )
                     _marcar_actualizado(odontograma, request.user)
-            return JsonResponse({"success": True, "message": "Estado actualizado"})
+            res = {"success": True, "message": "Estado actualizado"}
+            if 'h_obj' in locals():
+                res["historial_item"] = _serializar_historial_obj(h_obj)
+            return JsonResponse(res)
         except ValidationError as exc:
             return _json_error(str(exc))
 
@@ -591,12 +676,16 @@ class OdontogramaActualizarSuperficieAPIView(LoginRequeridoMixin, View):
         _validar_acceso_odontograma(request, odontograma, edicion=True)
         try:
             data = _json_body(request)
-            pieza_dental = get_object_or_404(PiezaDental, pk=codigo_pieza)
+            pieza_dental = _obtener_pieza(codigo_pieza)
             cara = _obtener_cara(codigo_pieza, data.get("cara"), crear=True)
             if not cara:
                 return _json_error("Cara dental invalida.")
             condicion = _obtener_condicion(data.get("condicion"))
             observacion = (data.get("observacion") or "").strip() or None
+            estado_clinico = data.get("estado_clinico", "condicion")
+            estados_validos = dict(OdontogramaDetalle.ESTADO_CLINICO_CHOICES)
+            if estado_clinico not in estados_validos:
+                estado_clinico = "condicion"
 
             with transaction.atomic():
                 existente = OdontogramaDetalle.objects.filter(
@@ -609,7 +698,7 @@ class OdontogramaActualizarSuperficieAPIView(LoginRequeridoMixin, View):
                     if existente:
                         anterior = existente.id_condicion.nombre
                         existente.delete()
-                        _registrar_historial(
+                        h_obj = _registrar_historial(
                             odontograma,
                             pieza_dental,
                             request.user,
@@ -619,28 +708,40 @@ class OdontogramaActualizarSuperficieAPIView(LoginRequeridoMixin, View):
                             estado_nuevo="sin_dato",
                         )
                         _marcar_actualizado(odontograma, request.user)
-                    return JsonResponse({"success": True, "message": "Superficie eliminada"})
+                    res = {"success": True, "message": "Superficie eliminada"}
+                    if 'h_obj' in locals():
+                        res["historial_item"] = _serializar_historial_obj(h_obj)
+                    return JsonResponse(res)
 
                 anterior = existente.id_condicion.nombre if existente else "sin_dato"
+                anterior_estado = existente.estado_clinico if existente else "sano"
                 detalle, created = OdontogramaDetalle.objects.update_or_create(
                     id_odontograma=odontograma,
                     codigo_pieza_dental=pieza_dental,
                     id_cara_dental=cara,
-                    defaults={"id_condicion": condicion, "observacion": observacion},
+                    defaults={
+                        "id_condicion": condicion,
+                        "observacion": observacion,
+                        "estado_clinico": estado_clinico,
+                    },
                 )
                 detalle.clean()
-                if created or anterior != condicion.nombre or (existente and existente.observacion != observacion):
-                    _registrar_historial(
+                h_obj = None
+                if created or anterior != condicion.nombre or anterior_estado != estado_clinico or (existente and existente.observacion != observacion):
+                    h_obj = _registrar_historial(
                         odontograma,
                         pieza_dental,
                         request.user,
                         "superficie",
-                        f"Cara {cara.nombre}: {anterior} -> {condicion.nombre}",
-                        estado_anterior=anterior,
-                        estado_nuevo=condicion.nombre,
+                        f"Cara {cara.nombre}: {anterior} -> {condicion.nombre} [{estado_clinico}]",
+                        estado_anterior=f"{anterior} [{anterior_estado}]",
+                        estado_nuevo=f"{condicion.nombre} [{estado_clinico}]",
                     )
                     _marcar_actualizado(odontograma, request.user)
-            return JsonResponse({"success": True, "message": "Superficie actualizada"})
+            res = {"success": True, "message": "Superficie actualizada"}
+            if h_obj:
+                res["historial_item"] = _serializar_historial_obj(h_obj)
+            return JsonResponse(res)
         except ValidationError as exc:
             return _json_error(str(exc))
 
@@ -651,7 +752,7 @@ class OdontogramaActualizarRaizAPIView(LoginRequeridoMixin, View):
         _validar_acceso_odontograma(request, odontograma, edicion=True)
         try:
             data = _json_body(request)
-            pieza_dental = get_object_or_404(PiezaDental, pk=codigo_pieza)
+            pieza_dental = _obtener_pieza(codigo_pieza)
             raiz = _normalizar(data.get("raiz"))
             tercio = _normalizar(data.get("tercio") or "completo")
             raiz_choices = dict(OdontogramaRaiz.RAIZ_CHOICES)
@@ -752,7 +853,7 @@ class OdontogramaActualizarPeriodontoAPIView(LoginRequeridoMixin, View):
         _validar_acceso_odontograma(request, odontograma, edicion=True)
         try:
             data = _json_body(request)
-            pieza_dental = get_object_or_404(PiezaDental, pk=codigo_pieza)
+            pieza_dental = _obtener_pieza(codigo_pieza)
             campos = {
                 "movilidad": (data.get("movilidad") or "").strip() or None,
                 "furca": (data.get("furca") or "").strip() or None,
@@ -789,5 +890,142 @@ class OdontogramaActualizarPeriodontoAPIView(LoginRequeridoMixin, View):
                     )
                     _marcar_actualizado(odontograma, request.user)
             return JsonResponse({"success": True, "message": "Periodonto actualizado"})
+        except ValidationError as exc:
+            return _json_error(str(exc))
+
+
+class OdontogramaEnviarPlanAPIView(LoginRequeridoMixin, View):
+    """Crea o agrega un ítem al plan de tratamiento activo desde el odontograma."""
+
+    def post(self, request, odontograma_id):
+        from apps.tratamientos.models import (
+            PlanTratamiento,
+            PlanTratamientoDetalle,
+            Tratamiento,
+        )
+
+        odontograma = get_object_or_404(
+            Odontograma.objects.select_related(
+                "id_ficha_clinica__id_paciente",
+                "id_evolucion",
+                "id_odontologo",
+            ),
+            pk=odontograma_id,
+        )
+        _validar_acceso_odontograma(request, odontograma, edicion=True)
+
+        try:
+            data = _json_body(request)
+            codigo_pieza = data.get("codigo_pieza")
+            condicion_id = data.get("condicion_id")
+            observacion = (data.get("observacion") or "").strip()
+
+            if not codigo_pieza or not condicion_id:
+                return _json_error("Pieza dental y condicion son obligatorios.")
+
+            pieza_dental = _obtener_pieza(codigo_pieza)
+            condicion = CondicionOdontologica.objects.filter(
+                pk=condicion_id, estado_condicion="activo"
+            ).first()
+            if not condicion:
+                return _json_error("Condicion no encontrada o inactiva.")
+
+            # Buscar tratamiento que coincida con el nombre de la condición
+            tratamiento = Tratamiento.objects.filter(
+                estado_tratamiento="activo",
+                nombre__icontains=condicion.nombre,
+            ).first()
+            if not tratamiento:
+                tratamiento = Tratamiento.objects.filter(
+                    estado_tratamiento="activo"
+                ).first()
+            if not tratamiento:
+                return _json_error("No hay tratamientos activos registrados en el sistema.")
+
+            ficha = odontograma.id_ficha_clinica
+            odontologo = odontograma.id_odontologo
+            if not odontologo:
+                odontologo = _odontologo_usuario(request.user)
+            if not odontologo:
+                return _json_error("No se pudo determinar el odontologo para el plan.")
+
+            with transaction.atomic():
+                # Buscar plan activo existente o crear uno nuevo
+                plan = PlanTratamiento.objects.filter(
+                    id_ficha_clinica=ficha,
+                    estado_plan__in=[
+                        PlanTratamiento.ESTADO_ACTIVO,
+                        PlanTratamiento.ESTADO_BORRADOR,
+                        PlanTratamiento.ESTADO_EN_CURSO,
+                    ],
+                ).order_by("-fecha_creacion").first()
+
+                plan_creado = False
+                if not plan:
+                    plan = PlanTratamiento.objects.create(
+                        id_ficha_clinica=ficha,
+                        id_odontologo=odontologo,
+                        id_evolucion=odontograma.id_evolucion,
+                        id_odontograma=odontograma,
+                        estado_plan=PlanTratamiento.ESTADO_ACTIVO,
+                        observaciones=f"Creado desde odontograma v{odontograma.version}",
+                    )
+                    plan_creado = True
+
+                # Verificar que no exista duplicado
+                ya_existe = PlanTratamientoDetalle.objects.filter(
+                    id_plan_tratamiento=plan,
+                    id_tratamiento=tratamiento,
+                    codigo_pieza_dental=pieza_dental,
+                ).exclude(estado_detalle="anulado").exists()
+
+                if ya_existe:
+                    return _json_error(
+                        f"El tratamiento '{tratamiento.nombre}' ya existe "
+                        f"para la pieza {codigo_pieza} en el plan activo."
+                    )
+
+                PlanTratamientoDetalle.objects.create(
+                    id_plan_tratamiento=plan,
+                    id_tratamiento=tratamiento,
+                    codigo_pieza_dental=pieza_dental,
+                    cantidad=1,
+                    valor_unitario=tratamiento.valor_referencial,
+                    estado_detalle=PlanTratamientoDetalle.ESTADO_PENDIENTE,
+                    observaciones=observacion or f"Desde odontograma — {condicion.nombre}",
+                )
+
+                h_obj = _registrar_historial(
+                    odontograma,
+                    pieza_dental,
+                    request.user,
+                    "plan_tratamiento",
+                    f"Enviado a plan #{plan.id_plan_tratamiento}: {tratamiento.nombre}",
+                    estado_nuevo="planificado",
+                )
+
+                Bitacora.registrar(
+                    usuario=request.user,
+                    modulo="odontograma",
+                    accion="envio_plan",
+                    tabla_afectada="plan_tratamiento_detalle",
+                    id_registro_afectado=plan.id_plan_tratamiento,
+                    descripcion=(
+                        f"Pieza {codigo_pieza} — {tratamiento.nombre} enviado a "
+                        f"plan #{plan.id_plan_tratamiento}"
+                    ),
+                    request=request,
+                    paciente=odontograma.paciente,
+                )
+
+            msg = "Plan creado y tratamiento agregado." if plan_creado else "Tratamiento agregado al plan activo."
+            res = {
+                "success": True,
+                "message": msg,
+                "plan_id": plan.id_plan_tratamiento,
+            }
+            if 'h_obj' in locals():
+                res["historial_item"] = _serializar_historial_obj(h_obj)
+            return JsonResponse(res)
         except ValidationError as exc:
             return _json_error(str(exc))

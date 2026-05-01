@@ -56,9 +56,19 @@ class CondicionOdontologica(models.Model):
     ESTADO_INACTIVO = "inactivo"
     ESTADO_CHOICES = [(ESTADO_ACTIVO, "Activo"), (ESTADO_INACTIVO, "Inactivo")]
 
+    CATEGORIA_CHOICES = [
+        ("diagnostico", "Diagnóstico"),
+        ("tratamiento", "Tratamiento"),
+        ("estado_pieza", "Estado de pieza"),
+        ("periodoncia", "Periodoncia"),
+        ("urgencia", "Urgencia"),
+        ("otro", "Otro"),
+    ]
+
     id_condicion = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, unique=True)
     descripcion = models.CharField(max_length=150, null=True, blank=True)
+    categoria = models.CharField(max_length=20, choices=CATEGORIA_CHOICES, default="otro")
     estado_condicion = models.CharField(
         max_length=20, choices=ESTADO_CHOICES, default=ESTADO_ACTIVO
     )
@@ -177,6 +187,19 @@ class OdontogramaDetalle(models.Model):
     No puede haber dos condiciones para la misma cara de la misma pieza.
     """
 
+    ESTADO_CLINICO_CHOICES = [
+        ("sano", "Sano / Sin registro"),
+        ("existente", "Existente"),
+        ("condicion", "Condición detectada"),
+        ("planificado", "Planificado"),
+        ("en_tratamiento", "En tratamiento"),
+        ("completado", "Completado"),
+        ("ausente", "Ausente / Extraído"),
+        ("extraccion_indicada", "Extracción indicada"),
+        ("urgencia", "Urgencia"),
+        ("anulado", "Anulado"),
+    ]
+
     id_odontograma_detalle = models.AutoField(primary_key=True)
     id_odontograma = models.ForeignKey(
         Odontograma,
@@ -203,7 +226,22 @@ class OdontogramaDetalle(models.Model):
         on_delete=models.RESTRICT,
         related_name="odontograma_detalles",
     )
+    estado_clinico = models.CharField(
+        max_length=30,
+        choices=ESTADO_CLINICO_CHOICES,
+        default="condicion",
+    )
     observacion = models.CharField(max_length=150, null=True, blank=True)
+    fecha_anulacion = models.DateTimeField(null=True, blank=True)
+    motivo_anulacion = models.CharField(max_length=200, null=True, blank=True)
+    id_usuario_anula = models.ForeignKey(
+        "accounts.Usuario",
+        db_column="id_usuario_anula",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="odontograma_detalles_anulados",
+    )
 
     class Meta:
         db_table = "odontograma_detalle"

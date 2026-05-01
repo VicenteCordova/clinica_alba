@@ -1,0 +1,159 @@
+<!-- Modal Detalle Pieza -->
+<div class="modal fade" id="modal-detalle-pieza" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-geo-alt"></i> Pieza <span id="modal-pieza-numero"></span></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="row g-0 h-100">
+          
+          <!-- Columna Izquierda: Visualización -->
+          <div class="col-md-4 p-3 bg-light border-end text-center">
+            <h6 class="text-uppercase text-muted mb-3" style="font-size:12px;font-weight:700;">Estado Visual</h6>
+            <div id="svg-corona-container" class="mb-4 d-flex justify-content-center"></div>
+            <div id="svg-raiz-container" class="d-flex justify-content-center"></div>
+            <hr>
+            <div class="text-start">
+              <label class="form-label" style="font-size:13px;font-weight:600;">Estado General</label>
+              <select class="form-select form-select-sm mb-2" id="select-estado-general">
+                <option value="presente">Presente (Sano)</option>
+                <option value="ausente">Ausente / Extraído</option>
+                <option value="extraccion_indicada">Extracción indicada</option>
+                <option value="implante">Implante</option>
+              </select>
+              <textarea class="form-control form-control-sm mb-2" id="observacion-pieza" placeholder="Observación general..." rows="2"></textarea>
+              <button class="btn btn-primary btn-sm w-100" onclick="guardarEstadoGeneral()">Actualizar Estado General</button>
+            </div>
+          </div>
+
+          <!-- Columna Derecha: Pestañas de Registro -->
+          <div class="col-md-8 p-3">
+            <ul class="nav nav-tabs" id="piezaTabs" role="tablist">
+              <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-superficies" type="button">Corona/Superficies</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-raices" type="button">Raíces</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-perio" type="button">Periodonto</button></li>
+              <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-historial" type="button"><i class="bi bi-clock-history"></i> Historial</button></li>
+            </ul>
+            <div class="tab-content pt-3">
+              
+              <!-- Tab Superficies -->
+              <div class="tab-pane fade show active" id="tab-superficies">
+                <div class="row">
+                  <div class="col-md-5">
+                    <label class="form-label">Cara</label>
+                    <select class="form-select form-select-sm" id="select-cara"></select>
+                  </div>
+                  <div class="col-md-7">
+                    <label class="form-label">Condición / Tratamiento</label>
+                    <select class="form-select form-select-sm" id="select-condicion-cara">
+                      <option value="">(Eliminar registro / Sano)</option>
+                      {% for c in condiciones %}
+                      <option value="{{ c.id_condicion }}">{{ c.nombre }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-12 mt-2">
+                    <textarea class="form-control form-control-sm" id="observacion-superficie" placeholder="Observación (opcional)..." rows="2"></textarea>
+                  </div>
+                  <div class="col-12 mt-2">
+                    <button class="btn btn-clinical btn-sm" onclick="guardarSuperficie()">Guardar Superficie</button>
+                  </div>
+                </div>
+                <hr>
+                <h6 class="mt-3" style="font-size:13px;font-weight:700;">Superficies registradas</h6>
+                <ul class="list-group list-group-flush" id="lista-superficies" style="font-size:13px;"></ul>
+              </div>
+
+              <!-- Tab Raíces -->
+              <div class="tab-pane fade" id="tab-raices">
+                <div class="row">
+                  <div class="col-md-4">
+                    <label class="form-label">Raíz</label>
+                    <select class="form-select form-select-sm" id="select-raiz"></select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Tercio</label>
+                    <select class="form-select form-select-sm" id="select-tercio">
+                      <option value="completo">Completo</option>
+                      <option value="apical">Apical</option>
+                      <option value="medio">Medio</option>
+                      <option value="cervical">Cervical</option>
+                    </select>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Condición</label>
+                    <select class="form-select form-select-sm" id="select-condicion-raiz">
+                      <option value="">(Eliminar registro / Sano)</option>
+                      {% for c in condiciones %}
+                      <option value="{{ c.id_condicion }}">{{ c.nombre }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                  <div class="col-12 mt-2">
+                    <textarea class="form-control form-control-sm" id="observacion-raiz" placeholder="Observación (opcional)..." rows="2"></textarea>
+                  </div>
+                  <div class="col-12 mt-2">
+                    <button class="btn btn-clinical btn-sm" onclick="guardarRaiz()">Guardar Raíz</button>
+                  </div>
+                </div>
+                <hr>
+                <h6 class="mt-3" style="font-size:13px;font-weight:700;">Condiciones radiculares registradas</h6>
+                <ul class="list-group list-group-flush" id="lista-raices" style="font-size:13px;"></ul>
+              </div>
+
+              <!-- Tab Periodonto -->
+              <div class="tab-pane fade" id="tab-perio">
+                <div class="row g-2" style="font-size:13px;">
+                  <div class="col-md-6">
+                    <label class="form-label mb-1">Movilidad</label>
+                    <input type="text" class="form-control form-control-sm" id="perio-movilidad" placeholder="Ej: Grado I">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label mb-1">Furca</label>
+                    <input type="text" class="form-control form-control-sm" id="perio-furca" placeholder="Ej: Grado II">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label mb-1">P. Sondaje (mm)</label>
+                    <input type="text" class="form-control form-control-sm" id="perio-sondaje" placeholder="Ej: 3-4-3">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label mb-1">Recesión (mm)</label>
+                    <input type="text" class="form-control form-control-sm" id="perio-recesion" placeholder="Ej: 2">
+                  </div>
+                  <div class="col-12 mt-3 mb-2">
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="perio-sangrado">
+                      <label class="form-check-label" for="perio-sangrado">Sangrado al sondaje</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="perio-placa">
+                      <label class="form-check-label" for="perio-placa">Placa bacteriana</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                      <input class="form-check-input" type="checkbox" id="perio-supuracion">
+                      <label class="form-check-label" for="perio-supuracion">Supuración</label>
+                    </div>
+                  </div>
+                  <div class="col-12">
+                    <textarea class="form-control form-control-sm" id="perio-observacion" placeholder="Observaciones periodontales..." rows="2"></textarea>
+                  </div>
+                  <div class="col-12 mt-2">
+                    <button class="btn btn-clinical btn-sm" onclick="guardarPeriodonto()">Guardar Periodonto</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab Historial -->
+              <div class="tab-pane fade" id="tab-historial">
+                <ul class="list-group list-group-flush" id="lista-historial" style="font-size:12px;"></ul>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

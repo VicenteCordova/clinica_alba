@@ -1,109 +1,148 @@
-﻿/* ================================================================
-   static/css/odontograma_v2.css  |  Odontograma accesible WCAG
+/* ================================================================
+   static/css/odontograma_v2.css  |  Odontograma Clínico Profesional V3
    ================================================================ */
 
-/* ── Layout pantalla completa ──────────────────────────────── */
-.odontograma-page { display:flex; flex-direction:column; gap:14px; }
-.odontograma-header-bar { background:white; border:1px solid var(--color-borde); border-radius:var(--radius); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; }
+/* ── Layout Pantalla Completa ──────────────────────────────── */
+.odontograma-page { display:flex; flex-direction:column; gap:14px; height: calc(100vh - 120px); }
+.odontograma-header-bar { background:white; border:1px solid var(--color-borde); border-radius:var(--radius); padding:14px 20px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; flex-shrink: 0; }
 .odontograma-patient-name { font-size:16px; font-weight:800; color:var(--color-texto); }
 .odontograma-patient-meta { font-size:12px; color:var(--color-texto-suave); margin-top:2px; }
 
 /* ── Filtros pills ─────────────────────────────────────────── */
-.odontograma-filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.odontograma-filter-bar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; flex-shrink: 0; }
 .filter-pill { display:inline-flex; align-items:center; gap:5px; padding:5px 14px; border-radius:99px; font-size:12px; font-weight:600; cursor:pointer; border:1.5px solid var(--color-borde); background:white; color:var(--color-texto-suave); transition:all var(--transition); white-space:nowrap; }
 .filter-pill:hover { border-color:var(--color-acento); color:var(--color-acento); }
 .filter-pill.active { background:var(--color-acento); color:white; border-color:var(--color-acento); }
-.filter-pill[data-filter="condicion"].active   { background:#f59e0b; border-color:#f59e0b; }
-.filter-pill[data-filter="existente"].active   { background:#7c3aed; border-color:#7c3aed; }
-.filter-pill[data-filter="planificado"].active { background:#0369a1; border-color:#0369a1; }
-.filter-pill[data-filter="completado"].active  { background:#059669; border-color:#059669; }
 
-/* ── Layout cuerpo ─────────────────────────────────────────── */
-.odontograma-layout { display:flex; gap:14px; min-height:480px; }
-.odontograma-canvas-area { flex:1; background:white; border:1px solid var(--color-borde); border-radius:var(--radius); overflow:auto; padding:24px 16px; min-width:0; }
-.odontograma-right-panel { width:300px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; }
+/* ── Layout Cuerpo (Grid Principal + Panel Lateral) ────────── */
+.odontograma-layout { display:flex; gap:14px; flex:1; min-height: 0; }
+.odontograma-canvas-area { flex:1; background:white; border:1px solid var(--color-borde); border-radius:var(--radius); overflow-y:auto; overflow-x:auto; padding:30px 20px; min-width:0; display: flex; flex-direction: column; align-items: center; }
+.odontograma-right-panel { width:400px; flex-shrink:0; display:flex; flex-direction:column; gap:12px; height: 100%; }
 
-/* ── Leyenda accesible (WCAG) ──────────────────────────────── */
-.odontograma-legend-card { background:white; border:1px solid var(--color-borde); border-radius:var(--radius); padding:14px; }
-.odontograma-legend-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:var(--color-texto-muy-suave); margin-bottom:10px; }
-.legend-row { display:flex; align-items:center; gap:8px; margin-bottom:7px; font-size:12px; color:var(--color-texto); }
-.legend-swatch { width:14px; height:14px; border-radius:3px; flex-shrink:0; border:1px solid rgba(0,0,0,.1); }
-.legend-icon { font-size:14px; width:16px; text-align:center; flex-shrink:0; }
-.legend-label { font-weight:600; }
+/* ── Odontograma Anatómico Grid ────────────────────────────── */
+.odontograma-grid { min-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 30px; align-items: center; padding-bottom: 40px; }
+.odontograma-fila { display: flex; justify-content: center; gap: 30px; width: 100%; }
+.odontograma-cuadrante { display: flex; gap: 10px; padding: 15px; background: var(--color-bg); border: 1px solid var(--color-borde); border-radius: var(--radius); box-shadow: inset 0 2px 4px rgba(0,0,0,.02); }
+.odontograma-arch-sep { display: flex; align-items: center; justify-content: center; gap: 30px; margin: 0; color: var(--color-texto-muy-suave); font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; width: 100%; }
+.odontograma-arch-sep::before, .odontograma-arch-sep::after { content: ''; flex: 1; height: 2px; background: var(--color-borde); }
 
-/* Estados: color + ícono + texto (WCAG compliance) */
-.legend-sano      .legend-swatch { background:#f8fafc; border-color:#cbd5e1; }
+/* ── Diente Anatómico SVG ──────────────────────────────────── */
+.diente-anatomico-wrapper {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  width: 50px; padding: 6px 3px;
+  border: 1.5px solid transparent; border-radius: 8px; background: transparent;
+  cursor: pointer; transition: all .15s ease;
+}
+.diente-anatomico-wrapper:hover, .diente-anatomico-wrapper:focus-visible {
+  background: var(--color-bg-card); border-color: var(--color-borde-focus);
+  transform: translateY(-2px); outline: none; box-shadow: var(--shadow-sm);
+}
+.diente-anatomico-wrapper.selected {
+  background: var(--color-acento-light); border-color: var(--color-acento);
+  box-shadow: 0 0 0 3px rgba(47,128,166,.2); transform: scale(1.05);
+}
+.diente-numero { font-size: 13px; font-weight: 800; color: var(--color-texto-suave); }
+.diente-svg-anatomico { display: block; overflow: visible; filter: drop-shadow(0 2px 3px rgba(0,0,0,.1)); transition: all 0.2s; }
+.diente-anatomico-wrapper.selected .diente-svg-anatomico { filter: drop-shadow(0 4px 8px rgba(47,128,166,.4)); }
+
+.cara-path, .raiz-path { transition: filter .15s ease, stroke-width .15s ease; cursor: crosshair; stroke-linejoin: round; }
+.cara-path:hover, .raiz-path:hover { filter: brightness(0.85); stroke-width: 2.5px; }
+
+/* ── Panel de Registro Clínico ─────────────────────────────── */
+.odontograma-registro-panel { background:white; border:1px solid var(--color-borde); border-radius:var(--radius); flex:1; display:flex; flex-direction:column; overflow: hidden; }
+.registro-panel-header { padding:14px 16px; border-bottom:1px solid var(--color-borde); background: var(--color-bg); font-size:14px; font-weight:800; color:var(--color-acento-deep); flex-shrink: 0; }
+.registro-panel-body { flex:1; overflow-y:auto; padding:16px; display: flex; flex-direction: column; }
+.registro-panel-footer { padding:14px 16px; border-top:1px solid var(--color-borde); background: var(--color-bg); flex-shrink: 0; display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+
+/* ── Leyenda accesible (10 estados) ────────────────────────── */
+.odontograma-legend-card { background:white; border:1px solid var(--color-borde); border-radius:var(--radius); padding:14px; flex-shrink: 0; }
+.odontograma-legend-title { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; color:var(--color-texto-muy-suave); margin-bottom:10px; }
+.legend-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.legend-row { display:flex; align-items:center; gap:6px; font-size:11px; color:var(--color-texto); font-weight: 600; }
+.legend-swatch { width:12px; height:12px; border-radius:3px; flex-shrink:0; border:1px solid rgba(0,0,0,.15); }
+.legend-icon { font-size:12px; width:14px; text-align:center; flex-shrink:0; }
+
+/* Colores de leyenda y botones */
+.state-sano { background:#ffffff; border-color:#94a3b8; color:#475569; }
+.state-existente { background:#ede9ff; border-color:#7c3aed; color:#5b21b6; }
+.state-condicion { background:#fee2e2; border-color:#dc2626; color:#991b1b; }
+.state-planificado { background:#dbeafe; border-color:#2563eb; color:#1d4ed8; }
+.state-en_tratamiento { background:#ffedd5; border-color:#ea580c; color:#c2410c; }
+.state-completado { background:#dcfce7; border-color:#16a34a; color:#15803d; }
+.state-ausente { background:#f1f5f9; border-color:#475569; color:#334155; }
+.state-extraccion_indicada { background:#fff1f2; border-color:#be123c; color:#9f1239; }
+.state-urgencia { background:#fef3c7; border-color:#d97706; color:#b45309; }
+.state-anulado { background:#f8fafc; border-color:#cbd5e1; color:#94a3b8; }
+
+.legend-sano .legend-swatch { background:#ffffff; border-color:#cbd5e1; }
 .legend-existente .legend-swatch { background:#ede9ff; border-color:#7c3aed; }
 .legend-condicion .legend-swatch { background:#fee2e2; border-color:#dc2626; }
 .legend-planificado .legend-swatch { background:#dbeafe; border-color:#2563eb; }
-.legend-completado  .legend-swatch { background:#dff7ea; border-color:#059669; }
-.legend-ausente  .legend-swatch { background:#1e293b; border-color:#0f172a; }
-.legend-urgente  .legend-swatch { background:#fef3c7; border-color:#d97706; }
+.legend-tratamiento .legend-swatch { background:#ffedd5; border-color:#ea580c; }
+.legend-completado .legend-swatch { background:#dcfce7; border-color:#16a34a; }
+.legend-ausente .legend-swatch { background:#f1f5f9; border-color:#64748b; }
+.legend-extraccion .legend-swatch { background:#fff1f2; border-color:#be123c; }
+.legend-urgencia .legend-swatch { background:#fef3c7; border-color:#d97706; }
+.legend-anulado .legend-swatch { background:#f8fafc; border-color:#cbd5e1; }
 
-/* ── Panel de registro ─────────────────────────────────────── */
-.odontograma-registro-panel { background:white; border:1px solid var(--color-borde); border-radius:var(--radius); flex:1; display:flex; flex-direction:column; }
-.registro-panel-header { padding:14px 16px; border-bottom:1px solid var(--color-borde); }
-.registro-panel-header-title { font-size:13px; font-weight:700; color:var(--color-texto); }
-.registro-panel-body { flex:1; overflow-y:auto; padding:14px 16px; }
-.pieza-selected-badge { display:inline-flex; align-items:center; gap:5px; background:var(--color-acento); color:white; padding:4px 12px; border-radius:99px; font-size:12px; font-weight:700; margin-bottom:12px; }
-.state-selector-group { display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
-.state-btn { padding:5px 12px; border-radius:99px; font-size:11.5px; font-weight:600; border:1.5px solid var(--color-borde); background:white; cursor:pointer; transition:all var(--transition); }
-.state-btn:hover { border-color:var(--color-acento); }
-.state-btn.selected.existente   { background:var(--color-lavanda); color:#5b21b6; border-color:#7c3aed; }
-.state-btn.selected.planificado { background:var(--color-celeste); color:#0369a1; border-color:#2563eb; }
-.state-btn.selected.completado  { background:var(--color-menta); color:#065f46; border-color:#059669; }
-.state-btn.selected.condicion   { background:var(--color-error-light); color:#991b1b; border-color:#dc2626; }
-.condition-search { margin-bottom:10px; }
-.condition-list { display:flex; flex-direction:column; gap:4px; max-height:180px; overflow-y:auto; }
-.condition-item { display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:var(--radius-sm); cursor:pointer; transition:background var(--transition); font-size:12.5px; border:1px solid transparent; }
-.condition-item:hover { background:var(--color-acento-light); }
-.condition-item.selected { background:var(--color-acento-light); border-color:var(--color-acento); font-weight:600; }
-.condition-item-icon { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+/* ── Selector de Estado ────────────────────────────────────── */
+.state-selector-group { display:grid; grid-template-columns: repeat(3, 1fr); gap:6px; margin-bottom:16px; }
+.state-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding:8px 4px; border-radius:var(--radius-sm); font-size:10.5px; font-weight:600; border:1.5px solid var(--color-borde); background:var(--color-bg); cursor:pointer; transition:all .2s; text-align: center; line-height: 1.1; }
+.state-btn:hover { border-color:var(--color-acento); background: white; transform: translateY(-1px); }
+.state-btn.selected { font-weight: 800; box-shadow: 0 2px 5px rgba(0,0,0,.1); transform: scale(1.02); }
 
-/* ── Tabla historial inferior ──────────────────────────────── */
-.odontograma-history-table { background:white; border:1px solid var(--color-borde); border-radius:var(--radius); margin-top:14px; }
-.odontograma-history-header { padding:12px 16px; border-bottom:1px solid var(--color-borde); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
-.odontograma-history-title { font-size:13px; font-weight:700; color:var(--color-texto); }
-.odontograma-history-filters { display:flex; gap:8px; flex-wrap:wrap; }
-.history-filter-input { font-size:12px; padding:5px 10px; border-radius:var(--radius-sm); border:1.5px solid var(--color-borde); color:var(--color-texto); }
-.history-filter-input:focus { outline:none; border-color:var(--color-acento); }
+/* Apply colors dynamically via JS or class */
+.state-btn.selected.sano { background:#ffffff; border-color:#94a3b8; color:#475569; }
+.state-btn.selected.existente { background:#ede9ff; border-color:#7c3aed; color:#5b21b6; }
+.state-btn.selected.condicion { background:#fee2e2; border-color:#dc2626; color:#991b1b; }
+.state-btn.selected.planificado { background:#dbeafe; border-color:#2563eb; color:#1d4ed8; }
+.state-btn.selected.en_tratamiento { background:#ffedd5; border-color:#ea580c; color:#c2410c; }
+.state-btn.selected.completado { background:#dcfce7; border-color:#16a34a; color:#15803d; }
+.state-btn.selected.ausente { background:#f1f5f9; border-color:#475569; color:#334155; }
+.state-btn.selected.extraccion_indicada { background:#fff1f2; border-color:#be123c; color:#9f1239; }
+.state-btn.selected.urgencia { background:#fef3c7; border-color:#d97706; color:#b45309; }
 
-/* ── SVG Odontograma visual ────────────────────────────────── */
-.arch-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; fill:var(--color-texto-muy-suave); text-anchor:middle; }
-.arch-separator { stroke:var(--color-borde); stroke-width:1.5; stroke-dasharray:4 4; }
-.quadrant-label { font-size:10px; font-weight:600; fill:var(--color-texto-muy-suave); }
+/* ── Vista Ampliada SVG ────────────────────────────────────── */
+.pieza-zoom-container { background: var(--color-bg); border: 1px solid var(--color-borde); border-radius: var(--radius); padding: 16px; display: flex; justify-content: center; align-items: center; margin-bottom: 16px; position: relative; min-height: 180px; }
+.pieza-zoom-svg { width: 120px; height: 180px; filter: drop-shadow(0 4px 8px rgba(0,0,0,.15)); }
+.pieza-zoom-svg .cara-path, .pieza-zoom-svg .raiz-path { cursor: pointer; }
+.pieza-zoom-svg .cara-path:hover, .pieza-zoom-svg .raiz-path:hover { filter: brightness(0.8); stroke-width: 2px; }
+.pieza-zoom-svg .selected-zone { stroke: var(--color-acento) !important; stroke-width: 3px !important; filter: drop-shadow(0 0 4px rgba(47,128,166,.5)); }
 
-/* Diente componentes */
-.tooth-group { cursor:pointer; }
-.tooth-group:focus { outline:2px solid var(--color-acento); outline-offset:3px; border-radius:4px; }
-.tooth-crown { transition:filter var(--transition), stroke-width var(--transition); }
-.tooth-crown:hover { filter:brightness(.92); }
-.tooth-group.selected .tooth-crown { stroke:var(--color-acento); stroke-width:2.5px; filter:drop-shadow(0 0 4px rgba(47,128,166,.4)); }
-.tooth-number { font-size:9px; font-weight:700; fill:#64748b; text-anchor:middle; pointer-events:none; }
-.tooth-indicator { font-size:7px; text-anchor:middle; pointer-events:none; }
+/* ── Condiciones Lista ─────────────────────────────────────── */
+.condition-search { margin-bottom:10px; font-weight: 600; }
+.condition-category-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: var(--color-texto-suave); padding: 8px 10px 4px 10px; background: #f8fafc; position: sticky; top: 0; border-bottom: 1px solid var(--color-borde); }
+.condition-list { display:flex; flex-direction:column; max-height:220px; overflow-y:auto; border: 1px solid var(--color-borde); border-radius: var(--radius-sm); background: white; margin-bottom: 16px; }
+.condition-item { display:flex; align-items:center; gap:8px; padding:8px 12px; cursor:pointer; transition:all .15s; font-size:12px; border-bottom:1px solid #f1f5f9; }
+.condition-item:last-child { border-bottom: none; }
+.condition-item:hover { background:var(--color-bg); }
+.condition-item.selected { background:var(--color-acento-light); color: var(--color-acento-deep); font-weight:700; border-left: 3px solid var(--color-acento); }
 
-/* Estados por color + accesibilidad */
-.estado-sano          .tooth-crown { fill:#f8fafc; stroke:#cbd5e1; }
-.estado-existente     .tooth-crown { fill:#ede9ff; stroke:#7c3aed; }
-.estado-condicion     .tooth-crown { fill:#fee2e2; stroke:#dc2626; }
-.estado-planificado   .tooth-crown { fill:#dbeafe; stroke:#2563eb; }
-.estado-completado    .tooth-crown { fill:#dff7ea; stroke:#059669; }
-.estado-ausente       .tooth-crown { fill:#1e293b; stroke:#0f172a; }
-.estado-urgente       .tooth-crown { fill:#fef3c7; stroke:#d97706; }
+.unsaved-warning { font-size: 12px; color: #d97706; font-weight: 700; display: flex; align-items: center; gap: 6px; }
 
-/* Tooltip accesible */
-.tooth-tooltip { position:fixed; background:var(--color-texto); color:white; font-size:11px; padding:5px 10px; border-radius:var(--radius-sm); pointer-events:none; z-index:1000; max-width:200px; line-height:1.4; opacity:0; transition:opacity .15s; }
-.tooth-tooltip.visible { opacity:1; }
-.tooth-tooltip-title { font-weight:700; }
-.tooth-tooltip-estado { font-size:10px; opacity:.8; }
+/* ── Historial Avanzado ────────────────────────────────────── */
+.historial-container { background: white; border: 1px solid var(--color-borde); border-radius: var(--radius); margin-top: 14px; display: flex; flex-direction: column; }
+.historial-header { padding: 12px 20px; border-bottom: 1px solid var(--color-borde); display: flex; justify-content: space-between; align-items: center; background: var(--color-bg); border-radius: var(--radius) var(--radius) 0 0; }
+.historial-filters { display: flex; gap: 8px; }
+.historial-table-wrapper { max-height: 300px; overflow-y: auto; }
+.historial-table { margin-bottom: 0; font-size: 12px; }
+.historial-table th { position: sticky; top: 0; background: white; z-index: 10; font-size: 11px; text-transform: uppercase; color: var(--color-texto-suave); }
+.historial-table td { vertical-align: middle; }
+.historial-table tr.new-row { animation: highlight-row 2s ease-out; }
+
+@keyframes highlight-row {
+  0% { background-color: var(--color-acento-light); }
+  100% { background-color: transparent; }
+}
 
 /* ── Responsive ────────────────────────────────────────────── */
-@media (max-width:1024px) {
-  .odontograma-layout { flex-direction:column; }
-  .odontograma-right-panel { width:100%; flex-direction:row; align-items:flex-start; gap:12px; }
-  .odontograma-legend-card, .odontograma-registro-panel { flex:1; }
+@media (max-width:1200px) {
+  .odontograma-layout { flex-direction:column; height: auto; }
+  .odontograma-page { height: auto; }
+  .odontograma-right-panel { width:100%; height: auto; max-height: none; }
+  .odontograma-canvas-area { max-height: 600px; }
+  .legend-grid { grid-template-columns: repeat(5, 1fr); }
 }
-@media (max-width:640px) {
-  .odontograma-right-panel { flex-direction:column; }
-  .odontograma-canvas-area { padding:12px 8px; overflow-x:auto; }
+@media (max-width:768px) {
+  .legend-grid { grid-template-columns: repeat(3, 1fr); }
 }
