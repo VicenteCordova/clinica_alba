@@ -1,0 +1,53 @@
+{% if evolucion.motivo_consulta %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-chat-left-text me-2"></i>Motivo de consulta</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ evolucion.motivo_consulta }}</div>
+</div>
+{% endif %}
+{% if evolucion.anamnesis %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-chat-text me-2"></i>Anamnesis</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ evolucion.anamnesis }}</div>
+</div>
+{% endif %}
+{% if evolucion.diagnostico %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-stethoscope me-2"></i>Diagnostico clinico</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ evolucion.diagnostico }}</div>
+</div>
+{% endif %}
+{% if evolucion.procedimiento_realizado %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-clipboard-check me-2"></i>Procedimiento realizado</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ evolucion.procedimiento_realizado }}</div>
+</div>
+{% endif %}
+{% if evolucion.indicaciones %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-prescription2 me-2"></i>Indicaciones</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ evolucion.indicaciones }}</div>
+</div>
+{% endif %}
+{% if evolucion.tratamiento_sugerido %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-list-check me-2"></i>Tratamiento sugerido</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ evolucion.tratamiento_sugerido }}</div>
+</div>
+{% endif %}
+{% if evolucion.proxima_accion %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-calendar-plus me-2"></i>Proxima accion o control</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:14px;">{{ evolucion.proxima_accion }}</div>
+</div>
+{% endif %}
+{% if evolucion.observaciones %}
+<div class="card mb-3">
+  <div class="card-header"><h2 class="card-title"><i class="bi bi-journal-text me-2"></i>Observaciones</h2></div>
+  <div class="card-body" style="white-space:pre-wrap;font-size:13px;color:var(--color-texto-suave);">{{ evolucion.observaciones }}</div>
+</div>
+{% endif %}
+{% if not evolucion.tiene_registro_minimo %}
+<div class="alert alert-warning">
+  Esta evolucion aun no tiene contenido clinico suficiente para finalizar la atencion.
+</div>
+{% endif %}
