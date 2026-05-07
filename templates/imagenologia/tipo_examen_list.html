@@ -10,7 +10,9 @@
   </div>
   <div>
     <a href="{% url 'imagenologia:lista' %}" class="btn btn-outline me-2">Volver</a>
+    {% if perms.imagenologia.add_tipoexamenimagenologico %}
     <a href="{% url 'imagenologia:tipos_crear' %}" class="btn btn-primary"><i class="bi bi-plus"></i> Nuevo Tipo</a>
+    {% endif %}
   </div>
 </div>
 
@@ -40,7 +42,9 @@
             {% endif %}
           </td>
           <td>
+            {% if perms.imagenologia.change_tipoexamenimagenologico %}
             <a href="{% url 'imagenologia:tipos_editar' tipo.id_tipo_examen %}" class="btn btn-outline btn-sm"><i class="bi bi-pencil"></i></a>
+            {% endif %}
           </td>
         </tr>
         {% empty %}

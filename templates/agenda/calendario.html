@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load core_tags %}
 {% block title %}Agenda — {{ CLINICA_NOMBRE }}{% endblock %}
 {% block topbar_title %}Agenda Clínica{% endblock %}
@@ -22,7 +22,9 @@
     <h1 class="page-title">Agenda Clínica</h1>
     <p class="page-subtitle">Calendario de citas y gestión de horarios</p>
   </div>
+  {% if perms.agenda.add_cita %}
   <a href="{% url 'agenda:crear_cita' %}" class="btn btn-clinical"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Nueva cita</a>
+  {% endif %}
 </div>
 
 <!-- Filtros como pills -->

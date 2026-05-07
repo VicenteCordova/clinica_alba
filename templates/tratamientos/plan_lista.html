@@ -52,9 +52,11 @@
               <a href="{% url 'tratamientos:plan_detalle' plan.id_plan_tratamiento %}" class="btn btn-outline btn-sm">
                 <i class="bi bi-eye"></i>
               </a>
+              {% if perms.presupuestos.add_presupuesto %}
               <a href="{% url 'presupuestos:emitir' plan.id_plan_tratamiento %}" class="btn btn-primary btn-sm">
                 <i class="bi bi-receipt"></i> Presupuesto
               </a>
+              {% endif %}
             </div>
           </td>
         </tr>

@@ -27,13 +27,24 @@
       </div>
     </div>
     <div class="d-flex flex-column gap-2 flex-shrink-0">
+      {% if perms.agenda.add_cita %}
       <a href="{% url 'agenda:crear_cita' %}?paciente={{ paciente.id_paciente }}" class="btn btn-outline btn-sm"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Agendar</a>
-      {% if not tiene_ficha %}
-      <form method="post" action="{% url 'fichas:abrir' paciente.id_paciente %}">{% csrf_token %}<button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-folder-plus" aria-hidden="true"></i> Abrir ficha</button></form>
-      {% elif proxima_cita %}
-      <a href="{% url 'fichas:modo_atencion' proxima_cita.id_cita %}" class="btn btn-clinical btn-sm"><i class="bi bi-play-circle" aria-hidden="true"></i> Iniciar atención</a>
       {% endif %}
+      {% if not tiene_ficha %}
+        {% if perms.fichas.add_fichaclinica %}
+        <form method="post" action="{% url 'fichas:abrir' paciente.id_paciente %}">{% csrf_token %}<button type="submit" class="btn btn-success btn-sm w-100"><i class="bi bi-folder-plus" aria-hidden="true"></i> Abrir ficha</button></form>
+        {% endif %}
+      {% elif proxima_cita %}
+        {% if perms.fichas.add_evolucionclinica %}
+        <a href="{% url 'fichas:modo_atencion' proxima_cita.id_cita %}" class="btn btn-clinical btn-sm"><i class="bi bi-play-circle" aria-hidden="true"></i> Iniciar atención</a>
+        {% endif %}
+      {% endif %}
+      {% if perms.pacientes.change_paciente %}
       <a href="{% url 'pacientes:editar' paciente.id_paciente %}" class="btn btn-ghost btn-sm"><i class="bi bi-pencil" aria-hidden="true"></i> Editar datos</a>
+      {% endif %}
+      {% if perms.pacientes.disable_paciente %}
+      <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#inhabilitarPacienteModal"><i class="bi bi-trash" aria-hidden="true"></i> Inhabilitar</button>
+      {% endif %}
     </div>
   </div>
 </div>
@@ -161,7 +172,7 @@
       <div class="tab-pane fade" id="tab-datos" role="tabpanel">
         <div class="d-flex justify-content-between mb-3">
           <h4 class="section-title mb-0">Datos administrativos</h4>
-          {% if request.user|user_tiene_rol:"administrador,recepcionista,administrativo" %}
+          {% if perms.pacientes.change_paciente %}
           <a href="{% url 'pacientes:editar' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-pencil" aria-hidden="true"></i> Editar</a>
           {% endif %}
         </div>
@@ -203,7 +214,9 @@
       <div class="tab-pane fade" id="tab-antecedentes" role="tabpanel">
         <div class="d-flex justify-content-between mb-3">
           <h4 class="section-title mb-0">Antecedentes médicos</h4>
+          {% if perms.antecedentes.change_antecedente %}
           <a href="{% url 'antecedentes:lista' paciente.id_paciente %}" class="btn btn-outline btn-sm">Gestionar antecedentes</a>
+          {% endif %}
         </div>
         {% if tiene_ficha and ficha.observaciones_clinicas_generales %}
         <div class="alert alert-warning"><i class="bi bi-exclamation-triangle-fill" aria-hidden="true"></i><div>{{ ficha.observaciones_clinicas_generales }}</div></div>
@@ -235,7 +248,7 @@
       <div class="tab-pane fade" id="tab-odontograma" role="tabpanel">
         <div class="d-flex justify-content-between mb-3">
           <h4 class="section-title mb-0">Odontogramas</h4>
-          {% if tiene_ficha %}<a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo</a>{% endif %}
+          {% if tiene_ficha and perms.odontograma.add_odontograma %}<a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo</a>{% endif %}
         </div>
         {% for od in odontogramas %}
         <div class="clinical-list-item">
@@ -251,7 +264,9 @@
       <div class="tab-pane fade" id="tab-imagenologia" role="tabpanel">
         <div class="d-flex justify-content-between mb-3">
           <h4 class="section-title mb-0">Imagenología</h4>
+          {% if perms.imagenologia.add_examenimagenologico %}
           <a href="{% url 'imagenologia:crear' paciente.id_paciente %}" class="btn btn-primary btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Subir examen</a>
+          {% endif %}
         </div>
         {% for examen in imagenes %}
         <div class="clinical-list-item">
@@ -267,7 +282,7 @@
       <div class="tab-pane fade" id="tab-planes" role="tabpanel">
         <div class="d-flex justify-content-between mb-3">
           <h4 class="section-title mb-0">Planes de tratamiento</h4>
-          {% if tiene_ficha and request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}<a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo plan</a>{% endif %}
+          {% if tiene_ficha and perms.tratamientos.add_plantratamiento %}<a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo plan</a>{% endif %}
         </div>
         {% for plan in planes %}
         <div class="clinical-list-item">
@@ -332,4 +347,31 @@
     </div>
   </div>
 </div>
+
+<!-- Modal Inhabilitar Paciente -->
+<div class="modal fade" id="inhabilitarPacienteModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhabilitar Paciente</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" action="{% url 'pacientes:inhabilitar' paciente.id_paciente %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>¿Estás seguro de inhabilitar al paciente <strong>{{ paciente.nombre_completo }}</strong>?</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo de inhabilitación <span class="text-danger">*</span></label>
+            <textarea name="motivo_inhabilitacion" class="form-control" rows="3" required placeholder="Escriba el motivo por el cual se inhabilita este registro..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar Paciente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

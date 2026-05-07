@@ -10,15 +10,15 @@ from django.db import DatabaseError
 from django.core.exceptions import ValidationError
 from django.core.exceptions import PermissionDenied
 
-from apps.core.mixins import RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin, InhabilitarBaseView
 from apps.agenda.models import Cita, EstadoCita, Box, TipoAtencion
 from apps.agenda.forms import CitaForm, CambiarEstadoCitaForm
 from apps.agenda.services import CitaService
 from apps.auditoria.models import Bitacora
 
 
-class CalendarioView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class CalendarioView(PermisoRequeridoMixin, View):
+    permission_required = "agenda.view_cita"
     template_name = "agenda/calendario.html"
 
     def get(self, request):
@@ -35,8 +35,8 @@ class CalendarioView(RolRequeridoMixin, View):
         })
 
 
-class CitasJsonView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class CitasJsonView(PermisoRequeridoMixin, View):
+    permission_required = "agenda.view_cita"
     """Endpoint JSON para FullCalendar."""
 
     def get(self, request):
@@ -45,7 +45,7 @@ class CitasJsonView(RolRequeridoMixin, View):
             "id_odontologo__id_usuario__id_persona",
             "id_estado_cita",
             "id_box",
-        )
+        ).filter(activo=True)
         if request.user.tiene_rol("odontologo") and not request.user.tiene_rol(
             "administrador", "administrativo", "recepcionista", "director", "director_clinico"
         ):
@@ -93,8 +93,8 @@ class CitasJsonView(RolRequeridoMixin, View):
         return JsonResponse(eventos, safe=False)
 
 
-class CitaCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class CitaCrearView(PermisoRequeridoMixin, View):
+    permission_required = "agenda.add_cita"
     template_name = "agenda/cita_form.html"
 
     def get(self, request):
@@ -118,8 +118,8 @@ class CitaCrearView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"form": form, "titulo": "Nueva Cita"})
 
 
-class CitaDetalleView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class CitaDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "agenda.view_cita"
     template_name = "agenda/cita_detalle.html"
 
     def get(self, request, pk):
@@ -146,8 +146,8 @@ class CitaDetalleView(RolRequeridoMixin, View):
         })
 
 
-class CitaEditarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class CitaEditarView(PermisoRequeridoMixin, View):
+    permission_required = "agenda.change_cita"
     template_name = "agenda/cita_form.html"
 
     def get(self, request, pk):
@@ -170,8 +170,8 @@ class CitaEditarView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"form": form, "titulo": "Editar Cita", "cita": cita})
 
 
-class CitaCambiarEstadoView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class CitaCambiarEstadoView(PermisoRequeridoMixin, View):
+    permission_required = "agenda.change_cita"
     def post(self, request, pk):
         cita = get_object_or_404(Cita, pk=pk)
         form = CambiarEstadoCitaForm(data=request.POST)
@@ -191,8 +191,8 @@ class CitaCambiarEstadoView(RolRequeridoMixin, View):
                 messages.error(request, str(e))
         return redirect("agenda:detalle_cita", pk=pk)
 
-class CitaCambiarEstadoHTMXView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class CitaCambiarEstadoHTMXView(PermisoRequeridoMixin, View):
+    permission_required = "agenda.change_cita"
     """Vista HTMX para botones de acción rápida en dashboards."""
     def post(self, request, pk, nuevo_estado):
         cita = get_object_or_404(Cita, pk=pk)
@@ -211,3 +211,13 @@ class CitaCambiarEstadoHTMXView(RolRequeridoMixin, View):
         except Exception as e:
             from django.http import HttpResponse
             return HttpResponse(f'<span class="text-danger small">{str(e)}</span>', status=400)
+
+
+from django.urls import reverse_lazy
+class CitaInhabilitarView(InhabilitarBaseView):
+    permission_required = "agenda.disable_cita"
+    model = Cita
+    modulo_auditoria = "agenda"
+    
+    def get_url_redirect(self):
+        return reverse_lazy("agenda:calendario")

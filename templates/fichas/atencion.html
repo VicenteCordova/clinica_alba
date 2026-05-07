@@ -62,7 +62,9 @@
     <div class="card mb-3">
       <div class="card-header">
         <h2 class="card-title" style="font-size:13px;"><i class="bi bi-images me-2" aria-hidden="true"></i>Exámenes</h2>
+        {% if perms.imagenologia.add_examenimagenologico %}
         <a href="{% url 'imagenologia:crear' paciente.id_paciente %}?cita={{ cita.id_cita }}" class="btn btn-primary btn-sm" style="font-size:10px;"><i class="bi bi-upload" aria-hidden="true"></i></a>
+        {% endif %}
       </div>
       <div class="card-body p-0">
         {% for examen in imagenes|slice:":3" %}
@@ -149,7 +151,9 @@
     <div class="card mb-4">
       <div class="card-header">
         <h2 class="card-title"><i class="bi bi-file-earmark-medical me-2" aria-hidden="true"></i>Odontograma</h2>
+        {% if perms.odontograma.add_odontograma %}
         <a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}?cita={{ cita.id_cita }}{% if evolucion %}&evolucion={{ evolucion.id_evolucion }}{% endif %}" class="btn btn-primary btn-sm"><i class="bi bi-plus" aria-hidden="true"></i> Nuevo</a>
+        {% endif %}
       </div>
       <div class="card-body">
         {% if odontograma_actual %}
@@ -167,7 +171,9 @@
     <div class="card">
       <div class="card-header">
         <h2 class="card-title"><i class="bi bi-list-check me-2" aria-hidden="true"></i>Planes y presupuestos</h2>
-        {% if request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}<a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}?cita={{ cita.id_cita }}{% if evolucion %}&evolucion={{ evolucion.id_evolucion }}{% endif %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle" aria-hidden="true"></i> Nuevo plan</a>{% endif %}
+        {% if perms.tratamientos.add_plantratamiento %}
+        <a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}?cita={{ cita.id_cita }}{% if evolucion %}&evolucion={{ evolucion.id_evolucion }}{% endif %}" class="btn btn-primary btn-sm"><i class="bi bi-plus-circle" aria-hidden="true"></i> Nuevo plan</a>
+        {% endif %}
       </div>
       <div class="card-body p-0">
         <div class="table-wrapper" style="border:none;border-radius:0;">
@@ -197,10 +203,18 @@
     <div class="card">
       <div class="card-header"><h2 class="card-title" style="font-size:13px;"><i class="bi bi-lightning me-2" aria-hidden="true"></i>Acciones rápidas</h2></div>
       <div class="card-body d-grid gap-2">
+        {% if perms.odontograma.add_odontograma %}
         <a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}" class="btn btn-outline btn-sm"><i class="bi bi-file-earmark-medical" aria-hidden="true"></i> Nuevo odontograma</a>
-        {% if request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}<a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-outline btn-sm"><i class="bi bi-list-check" aria-hidden="true"></i> Nuevo plan</a>{% endif %}
-        <a href="{% url 'imagenologia:crear' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Subir adjunto</a>
+        {% endif %}
+        {% if perms.tratamientos.add_plantratamiento %}
+        <a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-outline btn-sm"><i class="bi bi-list-check" aria-hidden="true"></i> Nuevo plan</a>
+        {% endif %}
+        {% if perms.imagenologia.add_examenimagenologico %}
+        <a href="{% url 'imagenologia:crear' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-upload" aria-hidden="true"></i> Subir examen</a>
+        {% endif %}
+        {% if perms.antecedentes.view_antecedente %}
         <a href="{% url 'antecedentes:lista' paciente.id_paciente %}" class="btn btn-outline btn-sm"><i class="bi bi-heart-pulse" aria-hidden="true"></i> Ver antecedentes</a>
+        {% endif %}
         <hr class="divider">
         <form method="post">
           {% csrf_token %}

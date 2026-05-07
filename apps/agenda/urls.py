@@ -20,4 +20,9 @@ urlpatterns = [
         views.CitaCambiarEstadoHTMXView.as_view(),
         name="cambiar_estado_htmx",
     ),
+    path(
+        "citas/<int:pk>/inhabilitar/",
+        views.CitaInhabilitarView.as_view(),
+        name="inhabilitar_cita",
+    ),
 ]

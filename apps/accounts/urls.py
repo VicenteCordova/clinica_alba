@@ -18,4 +18,5 @@ urlpatterns = [
     path("roles/nuevo/", views.RolCrearView.as_view(), name="roles_crear"),
     path("roles/<int:pk>/editar/", views.RolEditarView.as_view(), name="roles_editar"),
     path("roles/<int:pk>/desactivar/", views.RolDesactivarView.as_view(), name="roles_desactivar"),
+    path("roles/<int:pk>/activar/", views.RolActivarView.as_view(), name="roles_activar"),
 ]

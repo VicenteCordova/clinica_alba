@@ -7,6 +7,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 
+from apps.core.enums import EstadoPresupuestoEnum
 
 class Presupuesto(models.Model):
     """
@@ -15,23 +16,6 @@ class Presupuesto(models.Model):
     Restricción crítica: monto_final = monto_bruto - descuento_total
     Se calcula y valida en PresupuestoService y en el formulario.
     """
-
-    ESTADO_VIGENTE = "vigente"
-    ESTADO_VENCIDO = "vencido"
-    ESTADO_ACEPTADO = "aceptado"
-    ESTADO_RECHAZADO = "rechazado"
-    ESTADO_ANULADO = "anulado"
-    ESTADO_PAGADO_PARCIAL = "pagado_parcial"
-    ESTADO_PAGADO_TOTAL = "pagado_total"
-    ESTADO_CHOICES = [
-        (ESTADO_VIGENTE, "Vigente"),
-        (ESTADO_VENCIDO, "Vencido"),
-        (ESTADO_ACEPTADO, "Aceptado"),
-        (ESTADO_RECHAZADO, "Rechazado"),
-        (ESTADO_ANULADO, "Anulado"),
-        (ESTADO_PAGADO_PARCIAL, "Pagado parcial"),
-        (ESTADO_PAGADO_TOTAL, "Pagado total"),
-    ]
 
     id_presupuesto = models.AutoField(primary_key=True)
     id_plan_tratamiento = models.ForeignKey(
@@ -47,7 +31,7 @@ class Presupuesto(models.Model):
     descuento_total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     monto_final = models.DecimalField(max_digits=10, decimal_places=2)
     estado_presupuesto = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_VIGENTE
+        max_length=20, choices=EstadoPresupuestoEnum.choices, default=EstadoPresupuestoEnum.VIGENTE
     )
     id_usuario_emite = models.ForeignKey(
         "accounts.Usuario",
@@ -70,9 +54,27 @@ class Presupuesto(models.Model):
         db_table = "presupuestos"
         verbose_name = "Presupuesto"
         verbose_name_plural = "Presupuestos"
+        permissions = [
+            ("disable_presupuesto", "Puede anular presupuesto"),
+            ("reactivate_presupuesto", "Puede reactivar presupuesto"),
+        ]
         ordering = ["-fecha_emision"]
         indexes = [
             models.Index(fields=["id_plan_tratamiento"], name="idx_presupuestos_plan"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(monto_bruto__gte=0),
+                name="chk_presupuesto_monto_bruto_positivo",
+            ),
+            models.CheckConstraint(
+                check=models.Q(descuento_total__gte=0),
+                name="chk_presupuesto_descuento_positivo",
+            ),
+            models.CheckConstraint(
+                check=models.Q(monto_final__gte=0),
+                name="chk_presupuesto_monto_final_positivo",
+            ),
         ]
 
     def __str__(self):
@@ -138,6 +140,20 @@ class PresupuestoDetalle(models.Model):
         unique_together = [("id_presupuesto", "id_plan_detalle")]
         verbose_name = "Detalle de Presupuesto"
         verbose_name_plural = "Detalles de Presupuesto"
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(cantidad__gte=1),
+                name="chk_detalle_cantidad_positiva",
+            ),
+            models.CheckConstraint(
+                check=models.Q(precio_unitario__gte=0),
+                name="chk_detalle_precio_positivo",
+            ),
+            models.CheckConstraint(
+                check=models.Q(subtotal__gte=0),
+                name="chk_detalle_subtotal_positivo",
+            ),
+        ]
 
     def __str__(self):
         return f"{self.descripcion_item} × {self.cantidad}"

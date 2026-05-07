@@ -5,15 +5,13 @@ Tablas: tratamientos, planes_tratamiento, plan_tratamiento_detalle
 """
 from django.db import models
 from django.utils import timezone
+from apps.core.models import InhabilitableModel
 from django.core.exceptions import ValidationError
+from apps.core.enums import EstadoBase, EstadoPlanEnum, EstadoDetallePlanEnum
 
 
-class Tratamiento(models.Model):
+class Tratamiento(InhabilitableModel):
     """Tabla: tratamientos"""
-
-    ESTADO_ACTIVO = "activo"
-    ESTADO_INACTIVO = "inactivo"
-    ESTADO_CHOICES = [(ESTADO_ACTIVO, "Activo"), (ESTADO_INACTIVO, "Inactivo")]
 
     id_tratamiento = models.AutoField(primary_key=True)
     codigo = models.CharField(max_length=30, unique=True)
@@ -22,13 +20,17 @@ class Tratamiento(models.Model):
     valor_referencial = models.DecimalField(max_digits=10, decimal_places=2)
     duracion_estimada_min = models.PositiveSmallIntegerField(null=True, blank=True)
     estado_tratamiento = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_ACTIVO
+        max_length=20, choices=EstadoBase.choices, default=EstadoBase.ACTIVO
     )
 
     class Meta:
         db_table = "tratamientos"
         verbose_name = "Tratamiento"
         verbose_name_plural = "Tratamientos"
+        permissions = [
+            ("disable_tratamiento", "Puede inhabilitar tratamiento"),
+            ("reactivate_tratamiento", "Puede reactivar tratamiento"),
+        ]
         ordering = ["nombre"]
 
     def __str__(self):
@@ -47,31 +49,6 @@ class Tratamiento(models.Model):
 
 class PlanTratamiento(models.Model):
     """Tabla: planes_tratamiento"""
-
-    ESTADO_ACTIVO = "activo"
-    ESTADO_CERRADO = "cerrado"
-    ESTADO_ANULADO = "anulado"
-    ESTADO_BORRADOR = "borrador"
-    ESTADO_PROPUESTO = "propuesto"
-    ESTADO_ACEPTADO_PARCIAL = "aceptado_parcial"
-    ESTADO_ACEPTADO = "aceptado"
-    ESTADO_RECHAZADO = "rechazado"
-    ESTADO_EN_CURSO = "en_curso"
-    ESTADO_SUSPENDIDO = "suspendido"
-    ESTADO_FINALIZADO = "finalizado"
-    ESTADO_CHOICES = [
-        (ESTADO_ACTIVO, "Activo"),
-        (ESTADO_CERRADO, "Cerrado"),
-        (ESTADO_ANULADO, "Anulado"),
-        (ESTADO_BORRADOR, "Borrador"),
-        (ESTADO_PROPUESTO, "Propuesto"),
-        (ESTADO_ACEPTADO_PARCIAL, "Aceptado parcialmente"),
-        (ESTADO_ACEPTADO, "Aceptado"),
-        (ESTADO_RECHAZADO, "Rechazado"),
-        (ESTADO_EN_CURSO, "En curso"),
-        (ESTADO_SUSPENDIDO, "Suspendido"),
-        (ESTADO_FINALIZADO, "Finalizado"),
-    ]
 
     id_plan_tratamiento = models.AutoField(primary_key=True)
     id_ficha_clinica = models.ForeignKey(
@@ -112,7 +89,7 @@ class PlanTratamiento(models.Model):
     )
     fecha_creacion = models.DateTimeField(default=timezone.now)
     estado_plan = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_ACTIVO
+        max_length=20, choices=EstadoPlanEnum.choices, default=EstadoPlanEnum.ACTIVO
     )
     observaciones = models.TextField(null=True, blank=True)
     fecha_anulacion = models.DateTimeField(null=True, blank=True)
@@ -152,23 +129,6 @@ class PlanTratamiento(models.Model):
 class PlanTratamientoDetalle(models.Model):
     """Tabla: plan_tratamiento_detalle"""
 
-    ESTADO_PENDIENTE = "pendiente"
-    ESTADO_APROBADO = "aprobado"
-    ESTADO_EN_CURSO = "en_curso"
-    ESTADO_REALIZADO = "realizado"
-    ESTADO_SUSPENDIDO = "suspendido"
-    ESTADO_RECHAZADO = "rechazado"
-    ESTADO_ANULADO = "anulado"
-    ESTADO_CHOICES = [
-        (ESTADO_PENDIENTE, "Pendiente"),
-        (ESTADO_APROBADO, "Aprobado"),
-        (ESTADO_EN_CURSO, "En curso"),
-        (ESTADO_REALIZADO, "Realizado"),
-        (ESTADO_SUSPENDIDO, "Suspendido"),
-        (ESTADO_RECHAZADO, "Rechazado"),
-        (ESTADO_ANULADO, "Anulado"),
-    ]
-
     id_plan_detalle = models.AutoField(primary_key=True)
     id_plan_tratamiento = models.ForeignKey(
         PlanTratamiento,
@@ -194,7 +154,7 @@ class PlanTratamientoDetalle(models.Model):
     cantidad = models.PositiveIntegerField(default=1)
     valor_unitario = models.DecimalField(max_digits=10, decimal_places=2)
     estado_detalle = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE
+        max_length=20, choices=EstadoDetallePlanEnum.choices, default=EstadoDetallePlanEnum.PENDIENTE
     )
     nivel_prioridad = models.PositiveSmallIntegerField(null=True, blank=True)
     observaciones = models.CharField(max_length=200, null=True, blank=True)

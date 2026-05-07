@@ -143,21 +143,24 @@
 <script>
   const tratamientosData = {
     {% for t in tratamientos %}
-    '{{ t.id_tratamiento }}': {nombre: '{{ t.nombre|escapejs }}', valor: {{ t.valor_referencial }}},
+    '{{ t.id_tratamiento }}': {nombre: '{{ t.nombre|escapejs }}', valor: parseFloat("{{ t.valor_referencial }}".replace(',', '.')) || 0},
     {% endfor %}
   };
 
   let filaIdx = 0;
 
   function agregarTratamiento(id, nombre, valor) {
-    const select = document.querySelector(`#items-body .trat-select:last-of-type`);
-    if (select) {
-      select.value = id;
-      select.dispatchEvent(new Event('change'));
+    const selects = document.querySelectorAll('#items-body .trat-select');
+    const lastSelect = selects.length > 0 ? selects[selects.length - 1] : null;
+    
+    if (lastSelect && lastSelect.value === "") {
+      lastSelect.value = id;
+      lastSelect.dispatchEvent(new Event('change'));
     } else {
       agregarFila();
       setTimeout(() => {
-        const s = document.querySelector('.trat-select:last-of-type');
+        const newSelects = document.querySelectorAll('.trat-select');
+        const s = newSelects[newSelects.length - 1];
         if (s) { s.value = id; s.dispatchEvent(new Event('change')); }
       }, 50);
     }

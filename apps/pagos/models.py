@@ -5,20 +5,17 @@ Tablas: medios_pago, pagos
 """
 from django.db import models
 from django.utils import timezone
+from apps.core.enums import EstadoBase, EstadoPagoEnum
 
 
 class MedioPago(models.Model):
     """Tabla: medios_pago"""
 
-    ESTADO_ACTIVO = "activo"
-    ESTADO_INACTIVO = "inactivo"
-    ESTADO_CHOICES = [(ESTADO_ACTIVO, "Activo"), (ESTADO_INACTIVO, "Inactivo")]
-
     id_medio_pago = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=50, unique=True)
     descripcion = models.CharField(max_length=100, null=True, blank=True)
     estado_medio_pago = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_ACTIVO
+        max_length=20, choices=EstadoBase.choices, default=EstadoBase.ACTIVO
     )
 
     class Meta:
@@ -39,13 +36,6 @@ class Pago(models.Model):
     Validado en PagoService con select_for_update().
     """
 
-    ESTADO_VIGENTE = "vigente"
-    ESTADO_ANULADO = "anulado"
-    ESTADO_CHOICES = [
-        (ESTADO_VIGENTE, "Vigente"),
-        (ESTADO_ANULADO, "Anulado"),
-    ]
-
     id_pago = models.AutoField(primary_key=True)
     id_presupuesto = models.ForeignKey(
         "presupuestos.Presupuesto",
@@ -64,7 +54,7 @@ class Pago(models.Model):
     numero_comprobante = models.CharField(max_length=50, unique=True, null=True, blank=True)
     observacion = models.CharField(max_length=200, null=True, blank=True)
     estado_pago = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_VIGENTE
+        max_length=20, choices=EstadoPagoEnum.choices, default=EstadoPagoEnum.VIGENTE
     )
     id_usuario_registra = models.ForeignKey(
         "accounts.Usuario",
@@ -87,9 +77,19 @@ class Pago(models.Model):
         db_table = "pagos"
         verbose_name = "Pago"
         verbose_name_plural = "Pagos"
+        permissions = [
+            ("disable_pago", "Puede anular pago"),
+            ("reactivate_pago", "Puede reactivar pago"),
+        ]
         ordering = ["-fecha_pago"]
         indexes = [
             models.Index(fields=["id_presupuesto"], name="idx_pagos_presupuesto"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(monto__gt=0),
+                name="chk_pago_monto_positivo",
+            ),
         ]
 
     def __str__(self):

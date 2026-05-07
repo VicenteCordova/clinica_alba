@@ -7,6 +7,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.db.models import Sum
 from django.core.exceptions import ValidationError
+from apps.core.enums import EstadoPresupuestoEnum, EstadoPagoEnum
 
 
 class PagoService:
@@ -41,7 +42,7 @@ class PagoService:
             .get(id_presupuesto=datos["id_presupuesto"].id_presupuesto)
         )
 
-        if presupuesto.estado_presupuesto in ["anulado", "rechazado"]:
+        if presupuesto.estado_presupuesto in [EstadoPresupuestoEnum.ANULADO, EstadoPresupuestoEnum.RECHAZADO]:
             raise ValidationError(
                 "No se puede registrar un pago en un presupuesto anulado o rechazado."
             )
@@ -50,15 +51,15 @@ class PagoService:
         ya_pagado = (
             Pago.objects.filter(
                 id_presupuesto=presupuesto,
-                estado_pago=Pago.ESTADO_VIGENTE,
+                estado_pago=EstadoPagoEnum.VIGENTE,
             ).aggregate(total=Sum("monto"))["total"]
             or Decimal("0")
         )
 
         nuevo_monto = Decimal(str(datos["monto"]))
-        estado_nuevo = datos.get("estado_pago", Pago.ESTADO_VIGENTE)
+        estado_nuevo = datos.get("estado_pago", EstadoPagoEnum.VIGENTE)
 
-        if estado_nuevo == Pago.ESTADO_VIGENTE:
+        if estado_nuevo == EstadoPagoEnum.VIGENTE:
             if (ya_pagado + nuevo_monto) > presupuesto.monto_final:
                 saldo = presupuesto.monto_final - ya_pagado
                 raise ValidationError(
@@ -79,7 +80,7 @@ class PagoService:
         pago.full_clean()
         pago.save()
 
-        if estado_nuevo == Pago.ESTADO_VIGENTE:
+        if estado_nuevo == EstadoPagoEnum.VIGENTE:
             caja_abierta = Caja.objects.filter(
                 id_usuario_apertura=usuario,
                 estado_caja=Caja.ESTADO_ABIERTA,
@@ -153,14 +154,14 @@ class PagoService:
 
         total_pagado = presupuesto.total_pagado
         if total_pagado >= presupuesto.monto_final and presupuesto.monto_final > 0:
-            nuevo_estado = Presupuesto.ESTADO_PAGADO_TOTAL
+            nuevo_estado = EstadoPresupuestoEnum.PAGADO_TOTAL
         elif total_pagado > 0:
-            nuevo_estado = Presupuesto.ESTADO_PAGADO_PARCIAL
+            nuevo_estado = EstadoPresupuestoEnum.PAGADO_PARCIAL
         elif presupuesto.estado_presupuesto in [
-            Presupuesto.ESTADO_PAGADO_TOTAL,
-            Presupuesto.ESTADO_PAGADO_PARCIAL,
+            EstadoPresupuestoEnum.PAGADO_TOTAL,
+            EstadoPresupuestoEnum.PAGADO_PARCIAL,
         ]:
-            nuevo_estado = Presupuesto.ESTADO_ACEPTADO
+            nuevo_estado = EstadoPresupuestoEnum.ACEPTADO
         else:
             return presupuesto
 

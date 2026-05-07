@@ -5,14 +5,14 @@ from django.views.generic import ListView
 from django.contrib import messages
 from django.db import transaction
 
-from apps.core.mixins import RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin
 from apps.odontologos.models import Odontologo, Especialidad, HorarioOdontologo
 from apps.odontologos.forms import OdontologoForm
 from apps.auditoria.models import Bitacora
 
 
-class OdontologoListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class OdontologoListView(PermisoRequeridoMixin, ListView):
+    permission_required = "odontologos.view_odontologo"
     template_name = "odontologos/lista.html"
     context_object_name = "odontologos"
     paginate_by = 20
@@ -23,8 +23,8 @@ class OdontologoListView(RolRequeridoMixin, ListView):
     )
 
 
-class OdontologoDetalleView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class OdontologoDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "odontologos.view_odontologo"
     template_name = "odontologos/detalle.html"
 
     def get(self, request, pk):
@@ -36,8 +36,8 @@ class OdontologoDetalleView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"odontologo": odontologo})
 
 
-class OdontologoCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class OdontologoCrearView(PermisoRequeridoMixin, View):
+    permission_required = "odontologos.add_odontologo"
     template_name = "odontologos/crear.html"
 
     def get(self, request):
@@ -97,8 +97,8 @@ class OdontologoCrearView(RolRequeridoMixin, View):
         })
 
 
-class OdontologoEditarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class OdontologoEditarView(PermisoRequeridoMixin, View):
+    permission_required = "odontologos.change_odontologo"
     template_name = "odontologos/editar.html"
 
     def get(self, request, pk):

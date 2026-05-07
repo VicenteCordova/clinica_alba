@@ -10,9 +10,11 @@
     <h1 class="page-title">Pacientes</h1>
     <p class="page-subtitle">{{ paginator.count }} paciente{{ paginator.count|pluralize }} registrado{{ paginator.count|pluralize }}</p>
   </div>
+  {% if perms.pacientes.add_paciente %}
   <a href="{% url 'pacientes:crear' %}" class="btn btn-primary">
     <i class="bi bi-person-plus"></i> Nuevo paciente
   </a>
+  {% endif %}
 </div>
 
 <!-- Búsqueda -->
@@ -89,11 +91,13 @@
                  class="btn btn-outline btn-sm" title="Ver detalle">
                 <i class="bi bi-eye"></i>
               </a>
+              {% if perms.pacientes.change_paciente %}
               <a href="{% url 'pacientes:editar' paciente.id_paciente %}"
                  class="btn btn-outline btn-sm" title="Editar">
                 <i class="bi bi-pencil"></i>
               </a>
-              {% if paciente.tiene_ficha %}
+              {% endif %}
+              {% if paciente.tiene_ficha and perms.fichas.view_fichaclinica %}
               <a href="{% url 'fichas:detalle' paciente.id_paciente %}"
                  class="btn btn-success btn-sm" title="Ficha clínica">
                 <i class="bi bi-clipboard2-pulse"></i>

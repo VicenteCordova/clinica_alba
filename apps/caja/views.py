@@ -7,14 +7,14 @@ from django.views import View
 from django.views.generic import ListView
 from django.contrib import messages
 
-from apps.core.mixins import LoginRequeridoMixin, RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin
 from apps.caja.models import Caja, MovimientoCaja
 from apps.caja.services import CajaService
 from apps.caja.forms import AbrirCajaForm, CerrarCajaForm, MovimientoCajaForm
 
 
-class CajaListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador"]
+class CajaListView(PermisoRequeridoMixin, ListView):
+    permission_required = "caja.view_caja"
     template_name = "caja/lista.html"
     context_object_name = "cajas"
     paginate_by = 20
@@ -23,8 +23,8 @@ class CajaListView(RolRequeridoMixin, ListView):
     ).order_by("-fecha_apertura")
 
 
-class AbrirCajaView(RolRequeridoMixin, View):
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador"]
+class AbrirCajaView(PermisoRequeridoMixin, View):
+    permission_required = "caja.add_caja"
     template_name = "caja/abrir.html"
 
     def get(self, request):
@@ -52,8 +52,8 @@ class AbrirCajaView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"form": form})
 
 
-class CajaDetalleView(RolRequeridoMixin, View):
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador"]
+class CajaDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "caja.view_caja"
     template_name = "caja/detalle.html"
 
     def get(self, request, pk):
@@ -69,8 +69,8 @@ class CajaDetalleView(RolRequeridoMixin, View):
         })
 
 
-class CerrarCajaView(RolRequeridoMixin, View):
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador"]
+class CerrarCajaView(PermisoRequeridoMixin, View):
+    permission_required = "caja.change_caja"
     def post(self, request, pk):
         caja = get_object_or_404(Caja, pk=pk)
         form = CerrarCajaForm(data=request.POST)
@@ -89,8 +89,8 @@ class CerrarCajaView(RolRequeridoMixin, View):
         return redirect("caja:detalle", pk=pk)
 
 
-class MovimientoCajaView(RolRequeridoMixin, View):
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador"]
+class MovimientoCajaView(PermisoRequeridoMixin, View):
+    permission_required = "caja.add_movimientocaja"
     def post(self, request, pk):
         caja = get_object_or_404(Caja, pk=pk)
         form = MovimientoCajaForm(data=request.POST)

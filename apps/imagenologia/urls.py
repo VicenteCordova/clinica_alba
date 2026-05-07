@@ -12,6 +12,7 @@ urlpatterns = [
     path("nuevo/paciente/<int:paciente_id>/", views.ExamenCrearView.as_view(), name="crear"),
     path("examen/<int:pk>/", views.ExamenDetalleView.as_view(), name="detalle"),
     path("examen/<int:pk>/editar/", views.ExamenEditarView.as_view(), name="editar"),
+    path("examen/<int:pk>/inhabilitar/", views.ExamenInhabilitarView.as_view(), name="inhabilitar_examen"),
     path("examen/<int:pk>/archivos/subir/", views.ArchivoSubirView.as_view(), name="subir_archivo"),
     path("examen/<int:pk>/observaciones/nueva/", views.ObservacionCrearView.as_view(), name="crear_observacion"),
     path("archivo/<int:pk>/descargar/", views.ArchivoDescargarView.as_view(), name="descargar_archivo"),

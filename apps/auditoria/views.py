@@ -1,14 +1,14 @@
 """apps/auditoria/views.py"""
 from django.views.generic import ListView
-from apps.core.mixins import LoginRequeridoMixin, RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin
 from apps.auditoria.models import Bitacora
 
 
-class BitacoraListView(RolRequeridoMixin, ListView):
+class BitacoraListView(PermisoRequeridoMixin, ListView):
+    permission_required = "auditoria.view_bitacora"
     template_name = "auditoria/lista.html"
     context_object_name = "registros"
     paginate_by = 50
-    roles_permitidos = ["administrador", "director", "director_clinico", "auditor"]
     queryset = (
         Bitacora.objects.select_related("id_usuario__id_persona")
         .order_by("-fecha_evento")

@@ -5,22 +5,22 @@ from django.views.generic import ListView
 from django.contrib import messages
 from django.core.exceptions import PermissionDenied
 
-from apps.core.mixins import RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin, InhabilitarBaseView
 from apps.tratamientos.models import Tratamiento, PlanTratamiento, PlanTratamientoDetalle
 from apps.tratamientos.forms import TratamientoForm
 from apps.fichas.models import FichaClinica
 from apps.auditoria.models import Bitacora
 
 
-class TratamientoListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico"]
+class TratamientoListView(PermisoRequeridoMixin, ListView):
+    permission_required = "tratamientos.view_tratamiento"
     template_name = "tratamientos/catalogo.html"
     context_object_name = "tratamientos"
     queryset = Tratamiento.objects.filter(estado_tratamiento="activo").order_by("nombre")
 
 
-class TratamientoCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class TratamientoCrearView(PermisoRequeridoMixin, View):
+    permission_required = "tratamientos.add_tratamiento"
     template_name = "tratamientos/tratamiento_form.html"
 
     def get(self, request):
@@ -45,8 +45,8 @@ class TratamientoCrearView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"form": form, "titulo": "Nuevo tratamiento"})
 
 
-class TratamientoEditarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class TratamientoEditarView(PermisoRequeridoMixin, View):
+    permission_required = "tratamientos.change_tratamiento"
     template_name = "tratamientos/tratamiento_form.html"
 
     def get(self, request, pk):
@@ -81,8 +81,8 @@ class TratamientoEditarView(RolRequeridoMixin, View):
         })
 
 
-class PlanTratamientoListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico", "recepcionista", "administrativo"]
+class PlanTratamientoListView(PermisoRequeridoMixin, ListView):
+    permission_required = "tratamientos.view_plantratamiento"
     template_name = "tratamientos/plan_lista.html"
     context_object_name = "planes"
     paginate_by = 20
@@ -103,8 +103,8 @@ class PlanTratamientoListView(RolRequeridoMixin, ListView):
         return qs
 
 
-class PlanTratamientoDetalleView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico", "recepcionista", "administrativo"]
+class PlanTratamientoDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "tratamientos.view_plantratamiento"
     template_name = "tratamientos/plan_detalle.html"
 
     def get(self, request, pk):
@@ -123,8 +123,8 @@ class PlanTratamientoDetalleView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"plan": plan})
 
 
-class PlanTratamientoCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico"]
+class PlanTratamientoCrearView(PermisoRequeridoMixin, View):
+    permission_required = "tratamientos.add_plantratamiento"
     template_name = "tratamientos/plan_form.html"
 
     def get(self, request, ficha_id):
@@ -210,6 +210,44 @@ class PlanTratamientoCrearView(RolRequeridoMixin, View):
                     estado_detalle=estado_detalle,
                 )
 
+            # Generar el presupuesto de forma automática
+            presupuesto = None
+            if request.user.has_perm("presupuestos.add_presupuesto"):
+                from apps.presupuestos.models import Presupuesto, PresupuestoDetalle
+                from apps.core.utils import generar_numero_correlativo
+                
+                monto_bruto = sum(d.subtotal for d in plan.detalles.all())
+                numero = generar_numero_correlativo(Presupuesto, "numero_presupuesto", "PRES", 6)
+                
+                presupuesto = Presupuesto.objects.create(
+                    id_plan_tratamiento=plan,
+                    numero_presupuesto=numero,
+                    monto_bruto=monto_bruto,
+                    descuento_total=0,
+                    monto_final=monto_bruto,
+                    id_usuario_emite=request.user,
+                )
+                
+                for detalle in plan.detalles.all():
+                    PresupuestoDetalle.objects.create(
+                        id_presupuesto=presupuesto,
+                        id_plan_detalle=detalle,
+                        descripcion_item=detalle.id_tratamiento.nombre,
+                        cantidad=detalle.cantidad,
+                        precio_unitario=detalle.valor_unitario,
+                        subtotal=detalle.subtotal,
+                    )
+                    
+                Bitacora.registrar(
+                    usuario=request.user,
+                    modulo="presupuestos",
+                    accion="emision",
+                    tabla_afectada="presupuestos",
+                    id_registro_afectado=presupuesto.id_presupuesto,
+                    descripcion=f"Presupuesto {numero} emitido automáticamente por ${monto_bruto:,.0f}",
+                    ip_origen=getattr(request, "ip_origen", None),
+                )
+
         Bitacora.registrar(
             usuario=request.user,
             modulo="tratamientos",
@@ -219,12 +257,17 @@ class PlanTratamientoCrearView(RolRequeridoMixin, View):
             descripcion=f"Plan #{plan.id_plan_tratamiento} creado con {len(tratamiento_ids)} ítem(s)",
             ip_origen=getattr(request, "ip_origen", None),
         )
-        messages.success(request, "Plan de tratamiento creado correctamente.")
-        return redirect("tratamientos:plan_detalle", pk=plan.id_plan_tratamiento)
+        
+        if presupuesto:
+            messages.success(request, f"Plan de tratamiento creado y presupuesto {presupuesto.numero_presupuesto} generado automáticamente.")
+            return redirect("presupuestos:detalle", pk=presupuesto.id_presupuesto)
+        else:
+            messages.success(request, "Plan de tratamiento creado correctamente.")
+            return redirect("tratamientos:plan_detalle", pk=plan.id_plan_tratamiento)
 
 
-class PlanCambiarEstadoView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico"]
+class PlanCambiarEstadoView(PermisoRequeridoMixin, View):
+    permission_required = "tratamientos.change_plantratamiento"
     """Cambiar estado del plan de tratamiento con validación de transiciones."""
 
     TRANSICIONES_VALIDAS = {
@@ -283,3 +326,25 @@ class PlanCambiarEstadoView(RolRequeridoMixin, View):
         )
         messages.success(request, f"Plan marcado como «{nuevo_estado}».")
         return redirect("tratamientos:plan_detalle", pk=pk)
+
+
+from django.urls import reverse_lazy
+
+class TratamientoInhabilitarView(InhabilitarBaseView):
+    permission_required = "tratamientos.disable_tratamiento"
+    model = Tratamiento
+    modulo_auditoria = "tratamientos"
+
+    def get_url_redirect(self):
+        return reverse_lazy("tratamientos:lista")
+
+
+class PlanTratamientoInhabilitarView(InhabilitarBaseView):
+    permission_required = "tratamientos.disable_plantratamiento"
+    model = PlanTratamiento
+    modulo_auditoria = "tratamientos"
+
+    def get_url_redirect(self):
+        obj = PlanTratamiento.objects.get(pk=self.kwargs['pk'])
+        return reverse_lazy("tratamientos:plan_detalle", kwargs={"pk": obj.id_plan_tratamiento})
+

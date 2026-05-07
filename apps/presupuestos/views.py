@@ -6,15 +6,16 @@ from django.contrib import messages
 from django.db import transaction
 from django.core.exceptions import PermissionDenied
 
-from apps.core.mixins import RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin, InhabilitarBaseView
 from apps.presupuestos.models import Presupuesto, PresupuestoDetalle
 from apps.tratamientos.models import PlanTratamiento, PlanTratamientoDetalle
 from apps.core.utils import generar_numero_correlativo
 from apps.auditoria.models import Bitacora
+from apps.core.enums import EstadoPresupuestoEnum
 
 
-class PresupuestoListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "cajero", "odontologo", "director", "director_clinico"]
+class PresupuestoListView(PermisoRequeridoMixin, ListView):
+    permission_required = "presupuestos.view_presupuesto"
     template_name = "presupuestos/lista.html"
     context_object_name = "presupuestos"
     paginate_by = 20
@@ -35,8 +36,8 @@ class PresupuestoListView(RolRequeridoMixin, ListView):
         return qs
 
 
-class PresupuestoDetalleView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "cajero", "odontologo", "director", "director_clinico"]
+class PresupuestoDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "presupuestos.view_presupuesto"
     template_name = "presupuestos/detalle.html"
 
     def get(self, request, pk):
@@ -58,8 +59,8 @@ class PresupuestoDetalleView(RolRequeridoMixin, View):
         })
 
 
-class PresupuestoEmitirView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "cajero"]
+class PresupuestoEmitirView(PermisoRequeridoMixin, View):
+    permission_required = "presupuestos.add_presupuesto"
     """Emite un presupuesto desde un plan de tratamiento."""
     template_name = "presupuestos/emitir_form.html"
 
@@ -85,15 +86,16 @@ class PresupuestoEmitirView(RolRequeridoMixin, View):
 
     def post(self, request, plan_id):
         plan = get_object_or_404(PlanTratamiento, pk=plan_id)
+        from decimal import Decimal, InvalidOperation
         if not request.user.tiene_rol("administrador", "director", "director_clinico"):
-            descuento = 0.0
+            descuento = Decimal("0.0")
             messages.info(request, "No tienes permisos para aplicar descuentos. Se ha forzado a 0.")
         else:
             descuento = request.POST.get("descuento_total", "0") or "0"
             try:
-                descuento = float(descuento)
-            except ValueError:
-                descuento = 0.0
+                descuento = Decimal(descuento)
+            except InvalidOperation:
+                descuento = Decimal("0.0")
 
         with transaction.atomic():
             # Calcular monto_bruto desde detalles seleccionados
@@ -156,8 +158,8 @@ class PresupuestoEmitirView(RolRequeridoMixin, View):
         return redirect("presupuestos:detalle", pk=presupuesto.id_presupuesto)
 
 
-class PresupuestoCambiarEstadoView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "cajero"]
+class PresupuestoCambiarEstadoView(PermisoRequeridoMixin, View):
+    permission_required = "presupuestos.change_presupuesto"
     """Cambiar estado del presupuesto con validación de transiciones de negocio."""
 
     TRANSICIONES_VALIDAS = {
@@ -171,12 +173,10 @@ class PresupuestoCambiarEstadoView(RolRequeridoMixin, View):
     }
 
     def post(self, request, pk):
-        if not request.user.tiene_rol("cajero", "administrativo", "recepcionista", "administrador"):
-            raise PermissionDenied("No tienes permisos para cambiar estados de presupuestos.")
         presupuesto = get_object_or_404(Presupuesto, pk=pk)
         nuevo_estado = request.POST.get("estado", "").strip()
 
-        if nuevo_estado not in dict(Presupuesto.ESTADO_CHOICES):
+        if nuevo_estado not in dict(EstadoPresupuestoEnum.choices):
             messages.error(request, "Estado inválido.")
             return redirect("presupuestos:detalle", pk=pk)
 
@@ -228,8 +228,8 @@ class PresupuestoCambiarEstadoView(RolRequeridoMixin, View):
         return redirect("presupuestos:detalle", pk=pk)
 
 
-class PresupuestoImprimirView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "cajero", "odontologo", "director", "director_clinico"]
+class PresupuestoImprimirView(PermisoRequeridoMixin, View):
+    permission_required = "presupuestos.view_presupuesto"
     template_name = "presupuestos/imprimir.html"
 
     def get(self, request, pk):
@@ -249,3 +249,15 @@ class PresupuestoImprimirView(RolRequeridoMixin, View):
         return render(request, self.template_name, {
             "presupuesto": presupuesto,
         })
+
+
+from django.urls import reverse_lazy
+
+class PresupuestoInhabilitarView(InhabilitarBaseView):
+    permission_required = "presupuestos.disable_presupuesto"
+    model = Presupuesto
+    modulo_auditoria = "presupuestos"
+
+    def get_url_redirect(self):
+        obj = Presupuesto.objects.get(pk=self.kwargs['pk'])
+        return reverse_lazy("presupuestos:detalle", kwargs={"pk": obj.id_presupuesto})

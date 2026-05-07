@@ -10,4 +10,5 @@ urlpatterns = [
     path("plan/<int:plan_id>/emitir/", views.PresupuestoEmitirView.as_view(), name="emitir"),
     path("<int:pk>/imprimir/", views.PresupuestoImprimirView.as_view(), name="imprimir"),
     path("<int:pk>/cambiar-estado/", views.PresupuestoCambiarEstadoView.as_view(), name="cambiar_estado"),
+    path("<int:pk>/inhabilitar/", views.PresupuestoInhabilitarView.as_view(), name="inhabilitar_presupuesto"),
 ]

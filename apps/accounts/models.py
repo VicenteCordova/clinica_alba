@@ -35,6 +35,10 @@ class Rol(models.Model):
         verbose_name = "Rol"
         verbose_name_plural = "Roles"
         ordering = ["nombre"]
+        permissions = [
+            ("disable_rol", "Puede inhabilitar rol"),
+            ("reactivate_rol", "Puede reactivar rol"),
+        ]
 
     def __str__(self):
         return self.nombre
@@ -111,6 +115,11 @@ class Usuario(AbstractBaseUser):
         db_table = "usuarios"
         verbose_name = "Usuario"
         verbose_name_plural = "Usuarios"
+        permissions = [
+            ("disable_usuario", "Puede inhabilitar usuario"),
+            ("reactivate_usuario", "Puede reactivar usuario"),
+            ("reset_password_usuario", "Puede resetear password de usuario"),
+        ]
 
     def __str__(self):
         return self.username
@@ -121,10 +130,42 @@ class Usuario(AbstractBaseUser):
         return self.estado_acceso == self.ESTADO_ACTIVO
 
     def has_perm(self, perm, obj=None):
-        return self.is_superuser
+        if self.is_superuser:
+            return True
+        if self.estado_acceso != self.ESTADO_ACTIVO:
+            return False
+            
+        from apps.core.permisos_roles import MAPA_PERMISOS, ALIASES_ROLES
+        
+        roles = [self.normalizar_nombre_rol(r) for r in self.get_roles()]
+        
+        for rol in roles:
+            rol_mapped = ALIASES_ROLES.get(rol, rol)
+            if perm in MAPA_PERMISOS.get(rol_mapped, set()):
+                return True
+        return False
+
+    def has_perms(self, perm_list, obj=None):
+        """Requerido por PermissionRequiredMixin de Django."""
+        if not isinstance(perm_list, (list, tuple)):
+            perm_list = [perm_list]
+        return all(self.has_perm(perm, obj) for perm in perm_list)
 
     def has_module_perms(self, app_label):
-        return self.is_superuser
+        if self.is_superuser:
+            return True
+        if self.estado_acceso != self.ESTADO_ACTIVO:
+            return False
+            
+        from apps.core.permisos_roles import MAPA_PERMISOS, ALIASES_ROLES
+        roles = [self.normalizar_nombre_rol(r) for r in self.get_roles()]
+        
+        for rol in roles:
+            rol_mapped = ALIASES_ROLES.get(rol, rol)
+            permisos_rol = MAPA_PERMISOS.get(rol_mapped, set())
+            if any(p.startswith(f"{app_label}.") for p in permisos_rol):
+                return True
+        return False
 
     # ── Helpers de rol ─────────────────────────────────────────────────────────
     @staticmethod

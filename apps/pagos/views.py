@@ -1,4 +1,4 @@
-﻿"""
+"""
 apps/pagos/views.py
 """
 from django.shortcuts import render, redirect, get_object_or_404
@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.db.models import Sum, Count, Q
 from django.utils import timezone
 
-from apps.core.mixins import LoginRequeridoMixin, RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin
 from apps.presupuestos.models import Presupuesto
 from apps.pagos.services import PagoService
 from apps.pagos.models import Pago, MedioPago
@@ -15,9 +15,9 @@ from apps.pagos.forms import PagoForm
 from apps.auditoria.models import Bitacora
 
 
-class PagoListaView(RolRequeridoMixin, View):
+class PagoListaView(PermisoRequeridoMixin, View):
     """Lista/historial general de pagos con filtros."""
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador", "director", "director_clinico"]
+    permission_required = "pagos.view_pago"
     template_name = "pagos/pago_lista.html"
 
     def get(self, request):
@@ -77,8 +77,8 @@ class PagoListaView(RolRequeridoMixin, View):
         return render(request, self.template_name, ctx)
 
 
-class PagoCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador"]
+class PagoCrearView(PermisoRequeridoMixin, View):
+    permission_required = "pagos.add_pago"
     template_name = "pagos/pago_form.html"
 
     def get(self, request, presupuesto_id):
@@ -125,8 +125,8 @@ class PagoCrearView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"form": form, "presupuesto": presupuesto, "caja_abierta": caja_abierta})
 
 
-class PagoAnularView(RolRequeridoMixin, View):
-    roles_permitidos = ["cajero", "administrativo", "recepcionista", "administrador"]
+class PagoAnularView(PermisoRequeridoMixin, View):
+    permission_required = "pagos.change_pago"
     template_name = "pagos/pago_anular.html"
 
     def get(self, request, pk):

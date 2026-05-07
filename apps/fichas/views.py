@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.db import transaction
 from django.core.exceptions import PermissionDenied, ValidationError
 
-from apps.core.mixins import LoginRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin, InhabilitarBaseView
 from apps.core.permissions import puede_atender_cita, puede_editar_clinico
 from apps.fichas.models import FichaClinica, EvolucionClinica, AdjuntoClinico
 from apps.agenda.models import Cita
@@ -53,7 +53,8 @@ def _estado_cita_por_nombre(*nombres):
     return None
 
 
-class FichaDetalleView(LoginRequeridoMixin, View):
+class FichaDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.view_fichaclinica"
     template_name = "fichas/detalle.html"
 
     def get(self, request, paciente_id):
@@ -81,7 +82,8 @@ class FichaDetalleView(LoginRequeridoMixin, View):
         })
 
 
-class AbrirFichaView(LoginRequeridoMixin, View):
+class AbrirFichaView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.add_fichaclinica"
     def post(self, request, paciente_id):
         if not puede_editar_clinico(request.user):
             raise PermissionDenied("No tienes permisos para editar informacion clinica.")
@@ -112,7 +114,8 @@ class AbrirFichaView(LoginRequeridoMixin, View):
         return redirect("fichas:detalle", paciente_id=paciente_id)
 
 
-class FichaEditarView(LoginRequeridoMixin, View):
+class FichaEditarView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.change_fichaclinica"
     """Editar observaciones clínicas generales de la ficha."""
 
     def post(self, request, paciente_id):
@@ -135,7 +138,8 @@ class FichaEditarView(LoginRequeridoMixin, View):
         return redirect("fichas:detalle", paciente_id=paciente_id)
 
 
-class FichaCambiarEstadoView(LoginRequeridoMixin, View):
+class FichaCambiarEstadoView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.change_fichaclinica"
     """Cambiar estado de ficha (activa / cerrada / bloqueada)."""
 
     TRANSICIONES_VALIDAS = {
@@ -178,7 +182,8 @@ class FichaCambiarEstadoView(LoginRequeridoMixin, View):
         return redirect("fichas:detalle", paciente_id=paciente_id)
 
 
-class AtencionCitaView(LoginRequeridoMixin, View):
+class AtencionCitaView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.add_evolucionclinica"
     """Modo Atencion: flujo clinico unico para odontologo y supervision."""
     template_name = "fichas/atencion.html"
 
@@ -397,7 +402,8 @@ class AtencionCitaView(LoginRequeridoMixin, View):
         return redirect("fichas:modo_atencion", cita_id=cita.id_cita)
 
 
-class EvolucionCrearView(LoginRequeridoMixin, View):
+class EvolucionCrearView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.add_evolucionclinica"
     template_name = "fichas/evolucion_form.html"
 
     def get(self, request, cita_id):
@@ -466,7 +472,8 @@ class EvolucionCrearView(LoginRequeridoMixin, View):
         return redirect("fichas:evolucion_detalle", pk=evolucion.id_evolucion)
 
 
-class EvolucionDetalleView(LoginRequeridoMixin, View):
+class EvolucionDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.view_evolucionclinica"
     template_name = "fichas/evolucion_detalle.html"
 
     def get(self, request, pk):
@@ -481,7 +488,8 @@ class EvolucionDetalleView(LoginRequeridoMixin, View):
         return render(request, self.template_name, {"evolucion": evolucion})
 
 
-class EvolucionEditarView(LoginRequeridoMixin, View):
+class EvolucionEditarView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.change_evolucionclinica"
     template_name = "fichas/evolucion_form.html"
 
     def get(self, request, pk):
@@ -513,7 +521,8 @@ class EvolucionEditarView(LoginRequeridoMixin, View):
         return redirect("fichas:evolucion_detalle", pk=pk)
 
 
-class AdjuntoSubirView(LoginRequeridoMixin, View):
+class AdjuntoSubirView(PermisoRequeridoMixin, View):
+    permission_required = "fichas.add_adjuntoclinico"
     def post(self, request, pk):
         evolucion = get_object_or_404(EvolucionClinica, pk=pk)
         if not puede_atender_cita(request.user, evolucion.id_cita):
@@ -532,3 +541,36 @@ class AdjuntoSubirView(LoginRequeridoMixin, View):
         adj.ruta_archivo.save(archivo.name, archivo, save=True)
         messages.success(request, f"Archivo '{archivo.name}' subido correctamente.")
         return redirect("fichas:evolucion_detalle", pk=pk)
+
+
+from django.urls import reverse_lazy
+
+class FichaInhabilitarView(InhabilitarBaseView):
+    permission_required = "fichas.disable_fichaclinica"
+    model = FichaClinica
+    modulo_auditoria = "fichas"
+
+    def get_url_redirect(self):
+        obj = FichaClinica.objects.get(pk=self.kwargs['pk'])
+        return reverse_lazy("pacientes:detalle", kwargs={"pk": obj.id_paciente_id})
+
+
+class EvolucionInhabilitarView(InhabilitarBaseView):
+    permission_required = "fichas.disable_evolucionclinica"
+    model = EvolucionClinica
+    modulo_auditoria = "fichas"
+
+    def get_url_redirect(self):
+        obj = EvolucionClinica.objects.get(pk=self.kwargs['pk'])
+        return reverse_lazy("fichas:detalle", kwargs={"paciente_id": obj.id_cita.id_paciente_id})
+
+
+class AdjuntoInhabilitarView(InhabilitarBaseView):
+    permission_required = "fichas.disable_adjuntoclinico"
+    model = AdjuntoClinico
+    modulo_auditoria = "fichas"
+
+    def get_url_redirect(self):
+        obj = AdjuntoClinico.objects.get(pk=self.kwargs['pk'])
+        return reverse_lazy("fichas:evolucion_detalle", kwargs={"pk": obj.id_evolucion_id})
+

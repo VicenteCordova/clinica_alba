@@ -8,6 +8,7 @@ import uuid
 from django.db import models
 from django.utils import timezone
 from django.conf import settings
+from apps.core.models import InhabilitableModel
 
 def path_archivo_examen(instance, filename):
     """Genera la ruta de almacenamiento segura: media/imagenologia/paciente_id/uuid_filename"""
@@ -42,7 +43,7 @@ class TipoExamenImagenologico(models.Model):
         return self.nombre
 
 
-class ExamenImagenologico(models.Model):
+class ExamenImagenologico(InhabilitableModel):
     """Contenedor principal del estudio clínico"""
     ESTADO_BORRADOR = 'borrador'
     ESTADO_FINALIZADO = 'finalizado'
@@ -82,6 +83,11 @@ class ExamenImagenologico(models.Model):
         db_table = "imagenologia_examenes"
         verbose_name = "Examen Imagenológico"
         verbose_name_plural = "Exámenes Imagenológicos"
+        permissions = [
+            ("disable_examenimagenologico", "Puede inhabilitar examen"),
+            ("reactivate_examenimagenologico", "Puede reactivar examen"),
+            ("open_viewer_examenimagenologico", "Puede abrir visor CBCT/DICOM"),
+        ]
         ordering = ["-fecha_examen", "-id_examen"]
         indexes = [
             models.Index(fields=["paciente"]),
@@ -139,6 +145,11 @@ class ArchivoExamenImagenologico(models.Model):
         db_table = "imagenologia_archivos"
         verbose_name = "Archivo de Examen"
         verbose_name_plural = "Archivos de Examen"
+        permissions = [
+            ("disable_archivoexamenimagenologico", "Puede anular archivo"),
+            ("reactivate_archivoexamenimagenologico", "Puede reactivar archivo"),
+            ("download_archivoexamenimagenologico", "Puede descargar archivo"),
+        ]
 
     def __str__(self):
         return f"Archivo {self.nombre_original} (Examen {self.examen_id})"
@@ -186,3 +197,65 @@ class AccesoExamenImagenologico(models.Model):
 
     def __str__(self):
         return f"{self.usuario} - {self.accion} - Archivo {self.archivo_id}"
+
+
+class SolicitudDeshabilitacionImagenologia(models.Model):
+    """
+    Solicitud de deshabilitación de un examen o archivo imagenológico.
+    Los odontólogos no pueden borrar directamente: deben crear una solicitud
+    que un administrador aprueba o rechaza.
+    """
+    ESTADO_PENDIENTE = "pendiente"
+    ESTADO_APROBADA = "aprobada"
+    ESTADO_RECHAZADA = "rechazada"
+    ESTADO_CHOICES = [
+        (ESTADO_PENDIENTE, "Pendiente"),
+        (ESTADO_APROBADA, "Aprobada"),
+        (ESTADO_RECHAZADA, "Rechazada"),
+    ]
+
+    id_solicitud = models.AutoField(primary_key=True)
+    examen = models.ForeignKey(
+        ExamenImagenologico,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_deshabilitacion",
+        null=True, blank=True,
+    )
+    archivo = models.ForeignKey(
+        ArchivoExamenImagenologico,
+        on_delete=models.CASCADE,
+        related_name="solicitudes_deshabilitacion",
+        null=True, blank=True,
+    )
+    solicitante = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.RESTRICT,
+        related_name="solicitudes_imagen_creadas",
+    )
+    motivo = models.TextField()
+    estado = models.CharField(
+        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE
+    )
+    fecha_solicitud = models.DateTimeField(default=timezone.now)
+    # Resolución
+    resuelto_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.RESTRICT,
+        null=True, blank=True,
+        related_name="solicitudes_imagen_resueltas",
+    )
+    fecha_resolucion = models.DateTimeField(null=True, blank=True)
+    motivo_resolucion = models.TextField(null=True, blank=True)
+
+    class Meta:
+        db_table = "imagenologia_solicitudes_deshabilitacion"
+        verbose_name = "Solicitud de Deshabilitación"
+        verbose_name_plural = "Solicitudes de Deshabilitación"
+        ordering = ["-fecha_solicitud"]
+        permissions = [
+            ("approve_solicituddeshabilitacion", "Puede aprobar/rechazar solicitudes de deshabilitación"),
+        ]
+
+    def __str__(self):
+        target = f"Examen {self.examen_id}" if self.examen_id else f"Archivo {self.archivo_id}"
+        return f"Solicitud #{self.id_solicitud} - {target} ({self.get_estado_display()})"

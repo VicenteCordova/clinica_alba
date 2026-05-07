@@ -5,6 +5,7 @@ Tablas: box, tipos_atencion, estados_cita, citas, historial_citas
 """
 from django.db import models
 from django.utils import timezone
+from apps.core.models import InhabilitableModel, AuditableModel
 from django.core.exceptions import ValidationError
 
 
@@ -78,7 +79,7 @@ class EstadoCita(models.Model):
         return self.nombre
 
 
-class Cita(models.Model):
+class Cita(InhabilitableModel, AuditableModel):
     """
     Tabla: citas
 
@@ -137,6 +138,10 @@ class Cita(models.Model):
         db_table = "citas"
         verbose_name = "Cita"
         verbose_name_plural = "Citas"
+        permissions = [
+            ("disable_cita", "Puede inhabilitar cita"),
+            ("reactivate_cita", "Puede reactivar cita"),
+        ]
         indexes = [
             models.Index(fields=["id_paciente"], name="idx_citas_paciente"),
             models.Index(fields=["id_odontologo"], name="idx_citas_odontologo"),

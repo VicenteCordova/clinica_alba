@@ -16,9 +16,16 @@
   <div class="d-flex gap-2">
     <a href="{% url 'pacientes:detalle' paciente.id_paciente %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Paciente</a>
     {% if ficha %}
-    <a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-primary">
-      <i class="bi bi-plus-circle"></i> Nuevo plan
-    </a>
+      {% if perms.tratamientos.add_plantratamiento %}
+      <a href="{% url 'tratamientos:plan_crear' ficha.id_ficha_clinica %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Nuevo plan
+      </a>
+      {% endif %}
+      {% if perms.fichas.disable_fichaclinica %}
+      <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#inhabilitarFichaModal">
+        <i class="bi bi-trash"></i> Inhabilitar
+      </button>
+      {% endif %}
     {% endif %}
   </div>
 </div>
@@ -28,10 +35,12 @@
   <div style="font-size:48px;margin-bottom:16px;">📋</div>
   <h2 style="font-size:18px;font-weight:700;margin-bottom:8px;">Este paciente no tiene ficha clínica</h2>
   <p style="color:var(--color-texto-suave);margin-bottom:20px;">Abre la ficha clínica para registrar evoluciones, odontogramas y planes de tratamiento.</p>
+  {% if perms.fichas.add_fichaclinica %}
   <form method="post" action="{% url 'fichas:abrir' paciente.id_paciente %}">
     {% csrf_token %}
     <button class="btn btn-primary btn-lg"><i class="bi bi-folder-plus"></i> Abrir ficha clínica</button>
   </form>
+  {% endif %}
 </div>
 {% else %}
 
@@ -77,9 +86,11 @@
     <div class="card mt-4">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h2 class="card-title"><i class="bi bi-grid me-2"></i>Odontogramas ({{ odontogramas|length }})</h2>
+        {% if perms.odontograma.add_odontograma %}
         <a href="{% url 'odontograma:crear' ficha.id_ficha_clinica %}" class="btn btn-primary btn-sm px-2 py-0">
           <i class="bi bi-plus" style="font-size:18px;"></i>
         </a>
+        {% endif %}
       </div>
       <div class="card-body p-0">
         {% if odontogramas %}
@@ -126,7 +137,9 @@
                   </div>
                   <div class="d-flex gap-1">
                     <a href="{% url 'fichas:evolucion_detalle' evol.id_evolucion %}" class="btn btn-outline btn-sm"><i class="bi bi-eye"></i> Ver</a>
+                    {% if perms.fichas.change_evolucionclinica %}
                     <a href="{% url 'fichas:evolucion_editar' evol.id_evolucion %}" class="btn btn-outline btn-sm"><i class="bi bi-pencil"></i></a>
+                    {% endif %}
                   </div>
                 </div>
                 {% if evol.diagnostico %}
@@ -158,4 +171,32 @@
   </div>
 </div>
 {% endif %}
+{% if ficha %}
+<!-- Modal Inhabilitar Ficha -->
+<div class="modal fade" id="inhabilitarFichaModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhabilitar Ficha Clínica</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" action="{% url 'fichas:inhabilitar_ficha' ficha.id_ficha_clinica %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>¿Estás seguro de inhabilitar la ficha clínica <strong>{{ ficha.numero_ficha }}</strong>?</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo de inhabilitación <span class="text-danger">*</span></label>
+            <textarea name="motivo_inhabilitacion" class="form-control" rows="3" required placeholder="Escriba el motivo por el cual se inhabilita este registro..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar Ficha</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

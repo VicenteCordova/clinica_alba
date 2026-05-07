@@ -10,9 +10,11 @@
     <p class="page-subtitle">{{ plan.id_ficha_clinica.id_paciente.nombre_completo }} · {{ plan.fecha_creacion|date:"d/m/Y" }}</p>
   </div>
   <div class="d-flex gap-2">
+    {% if perms.presupuestos.add_presupuesto %}
     <a href="{% url 'presupuestos:emitir' plan.id_plan_tratamiento %}" class="btn btn-primary">
       <i class="bi bi-receipt"></i> Emitir presupuesto
     </a>
+    {% endif %}
     <a href="{% url 'tratamientos:planes' %}" class="btn btn-outline">
       <i class="bi bi-arrow-left"></i> Volver
     </a>
@@ -118,13 +120,20 @@
 
         <hr style="border-color:var(--color-borde);margin:12px 0;">
         <div style="font-size:12px;text-transform:uppercase;font-weight:700;color:var(--color-texto-muy-suave);margin-bottom:4px;">Estado del plan</div>
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-center mt-2">
           <span class="badge-estado {{ plan.estado_plan }}">{{ plan.estado_plan }}</span>
-          {% if plan.estado_plan != 'anulado' and request.user|user_tiene_rol:'administrador,odontologo,director,director_clinico' %}
-          <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnularPlan">
-            <i class="bi bi-x-circle"></i> Anular
-          </button>
-          {% endif %}
+          <div class="d-flex gap-1">
+            {% if plan.estado_plan != 'anulado' and perms.tratamientos.change_plantratamiento %}
+            <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="modal" data-bs-target="#modalAnularPlan">
+              <i class="bi bi-x-circle"></i> Anular
+            </button>
+            {% endif %}
+            {% if perms.tratamientos.disable_plantratamiento %}
+            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#inhabilitarPlanModal">
+              <i class="bi bi-trash"></i> Inhabilitar
+            </button>
+            {% endif %}
+          </div>
         </div>
         {% if plan.estado_plan == 'anulado' %}
         <div class="mt-2" style="background:#fee2e2;padding:10px;border-radius:var(--radius);font-size:12px;">
@@ -150,9 +159,11 @@
     <div class="card">
       <div class="card-header">
         <h2 class="card-title"><i class="bi bi-receipt me-2"></i>Presupuestos</h2>
+        {% if perms.presupuestos.add_presupuesto %}
         <a href="{% url 'presupuestos:emitir' plan.id_plan_tratamiento %}" class="btn btn-primary btn-sm">
           <i class="bi bi-plus"></i> Emitir
         </a>
+        {% endif %}
       </div>
       <div class="card-body p-0">
         {% for pres in plan.presupuestos.all %}
@@ -190,7 +201,7 @@
         <h5 class="modal-title m-0"><i class="bi bi-exclamation-triangle me-2"></i> Anular Plan de Tratamiento</h5>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
       </div>
-      <form action="{% url 'tratamientos:plan_estado' plan.id_plan_tratamiento %}" method="post">
+      <form action="{% url 'tratamientos:plan_cambiar_estado' plan.id_plan_tratamiento %}" method="post">
         {% csrf_token %}
         <input type="hidden" name="estado" value="anulado">
         <div class="modal-body">
@@ -210,4 +221,33 @@
     </div>
   </div>
 </div>
+
+{% if perms.tratamientos.disable_plantratamiento %}
+<!-- Modal Inhabilitar Plan -->
+<div class="modal fade" id="inhabilitarPlanModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhabilitar Plan de Tratamiento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" action="{% url 'tratamientos:inhabilitar_plantratamiento' plan.id_plan_tratamiento %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>¿Estás seguro de inhabilitar el plan <strong>#{{ plan.id_plan_tratamiento }}</strong> de {{ plan.id_ficha_clinica.id_paciente.nombre_completo }}?</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo de inhabilitación <span class="text-danger">*</span></label>
+            <textarea name="motivo_inhabilitacion" class="form-control" rows="3" required placeholder="Escriba el motivo por el cual se inhabilita este registro..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

@@ -6,8 +6,10 @@ Tablas: fichas_clinicas, evoluciones_clinicas, adjuntos_clinicos
 import os
 from django.db import models
 from django.utils import timezone
+from apps.core.models import InhabilitableModel, AuditableModel
 from django.core.exceptions import ValidationError
 from django.conf import settings
+from apps.core.enums import EstadoFichaEnum
 
 
 def adjunto_upload_path(instance, filename):
@@ -19,17 +21,8 @@ def adjunto_upload_path(instance, filename):
     )
 
 
-class FichaClinica(models.Model):
+class FichaClinica(InhabilitableModel, AuditableModel):
     """Tabla: fichas_clinicas"""
-
-    ESTADO_ACTIVA = "activa"
-    ESTADO_CERRADA = "cerrada"
-    ESTADO_BLOQUEADA = "bloqueada"
-    ESTADO_CHOICES = [
-        (ESTADO_ACTIVA, "Activa"),
-        (ESTADO_CERRADA, "Cerrada"),
-        (ESTADO_BLOQUEADA, "Bloqueada"),
-    ]
 
     id_ficha_clinica = models.AutoField(primary_key=True)
     id_paciente = models.OneToOneField(
@@ -41,7 +34,7 @@ class FichaClinica(models.Model):
     numero_ficha = models.CharField(max_length=30, unique=True)
     fecha_apertura = models.DateField()
     estado_ficha = models.CharField(
-        max_length=20, choices=ESTADO_CHOICES, default=ESTADO_ACTIVA
+        max_length=20, choices=EstadoFichaEnum.choices, default=EstadoFichaEnum.ACTIVA
     )
     observaciones_clinicas_generales = models.TextField(null=True, blank=True)
 
@@ -49,6 +42,10 @@ class FichaClinica(models.Model):
         db_table = "fichas_clinicas"
         verbose_name = "Ficha Clínica"
         verbose_name_plural = "Fichas Clínicas"
+        permissions = [
+            ("disable_fichaclinica", "Puede inhabilitar ficha clinica"),
+            ("reactivate_fichaclinica", "Puede reactivar ficha clinica"),
+        ]
         indexes = [
             models.Index(fields=["id_paciente"], name="idx_fichas_paciente"),
         ]
@@ -57,7 +54,7 @@ class FichaClinica(models.Model):
         return f"Ficha {self.numero_ficha} — {self.id_paciente.nombre_completo}"
 
 
-class EvolucionClinica(models.Model):
+class EvolucionClinica(InhabilitableModel, AuditableModel):
     """
     Tabla: evoluciones_clinicas
 
@@ -102,6 +99,10 @@ class EvolucionClinica(models.Model):
         db_table = "evoluciones_clinicas"
         verbose_name = "Evolución Clínica"
         verbose_name_plural = "Evoluciones Clínicas"
+        permissions = [
+            ("disable_evolucionclinica", "Puede inhabilitar evolucion clinica"),
+            ("reactivate_evolucionclinica", "Puede reactivar evolucion clinica"),
+        ]
         ordering = ["-fecha_evolucion"]
         indexes = [
             models.Index(fields=["id_cita"], name="idx_evoluciones_cita"),
@@ -125,7 +126,7 @@ class EvolucionClinica(models.Model):
         return any((campo or "").strip() for campo in campos)
 
 
-class AdjuntoClinico(models.Model):
+class AdjuntoClinico(InhabilitableModel):
     """Tabla: adjuntos_clinicos"""
 
     EXTENSIONES_PERMITIDAS = [
@@ -159,6 +160,11 @@ class AdjuntoClinico(models.Model):
         db_table = "adjuntos_clinicos"
         verbose_name = "Adjunto Clínico"
         verbose_name_plural = "Adjuntos Clínicos"
+        permissions = [
+            ("disable_adjuntoclinico", "Puede inhabilitar adjunto clinico"),
+            ("reactivate_adjuntoclinico", "Puede reactivar adjunto clinico"),
+            ("download_adjuntoclinico", "Puede descargar adjunto clinico"),
+        ]
 
     def __str__(self):
         return self.nombre_archivo

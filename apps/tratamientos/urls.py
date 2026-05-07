@@ -12,4 +12,6 @@ urlpatterns = [
     path("planes/<int:pk>/", views.PlanTratamientoDetalleView.as_view(), name="plan_detalle"),
     path("planes/<int:ficha_id>/nuevo/", views.PlanTratamientoCrearView.as_view(), name="plan_crear"),
     path("planes/<int:pk>/cambiar-estado/", views.PlanCambiarEstadoView.as_view(), name="plan_cambiar_estado"),
+    path("<int:pk>/inhabilitar/", views.TratamientoInhabilitarView.as_view(), name="inhabilitar_tratamiento"),
+    path("planes/<int:pk>/inhabilitar/", views.PlanTratamientoInhabilitarView.as_view(), name="inhabilitar_plantratamiento"),
 ]

@@ -13,6 +13,9 @@
   <div class="d-flex gap-2">
     <a href="{% url 'presupuestos:imprimir' presupuesto.id_presupuesto %}" class="btn btn-outline" target="_blank"><i class="bi bi-printer"></i> Imprimir</a>
     <a href="{% url 'presupuestos:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
+    {% if perms.presupuestos.disable_presupuesto %}
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#inhabilitarPresupuestoModal"><i class="bi bi-trash"></i> Inhabilitar</button>
+    {% endif %}
   </div>
 </div>
 
@@ -60,7 +63,7 @@
     <div class="card">
       <div class="card-header">
         <h2 class="card-title"><i class="bi bi-cash me-2"></i>Pagos registrados</h2>
-        {% if presupuesto.estado_presupuesto in 'vigente,aceptado,pagado_parcial' %}
+        {% if presupuesto.estado_presupuesto in 'vigente,aceptado,pagado_parcial' and perms.pagos.add_pago %}
         <a href="{% url 'pagos:crear' presupuesto.id_presupuesto %}" class="btn btn-primary btn-sm">
           <i class="bi bi-plus"></i> Registrar pago
         </a>
@@ -80,7 +83,7 @@
               </td>
               <td><span class="badge-estado {{ pago.estado_pago }}">{{ pago.estado_pago }}</span></td>
               <td>
-                {% if pago.estado_pago == 'vigente' %}
+                {% if pago.estado_pago == 'vigente' and perms.pagos.change_pago %}
                 <form method="post" action="{% url 'pagos:anular' pago.id_pago %}" style="display:inline;">
                   {% csrf_token %}
                   <input type="hidden" name="motivo" value="Anulación manual">
@@ -122,6 +125,7 @@
         </span>
         <hr style="border-color:var(--color-borde);">
         <!-- Cambiar estado -->
+        {% if perms.presupuestos.change_presupuesto %}
         <form method="post" action="{% url 'presupuestos:cambiar_estado' presupuesto.id_presupuesto %}">
           {% csrf_token %}
           <div class="form-group mb-2">
@@ -138,6 +142,7 @@
           </div>
           <button type="submit" class="btn btn-outline btn-sm w-100 mt-2">Actualizar estado</button>
         </form>
+        {% endif %}
         {% if presupuesto.estado_presupuesto == 'anulado' %}
         <div class="mt-3" style="background:#fee2e2;padding:12px;border-radius:var(--radius);font-size:12px;">
           <strong style="color:#991b1b;"><i class="bi bi-info-circle"></i> Motivo de anulación:</strong><br>
@@ -145,10 +150,38 @@
           <span style="color:#991b1b;font-size:10px;">Por: {{ presupuesto.id_usuario_anula.nombre_completo }} el {{ presupuesto.fecha_anulacion|date:"d/m/Y H:i" }}</span>
         </div>
         {% endif %}
-      </div>
     </div>
   </div>
 </div>
+
+{% if perms.presupuestos.disable_presupuesto %}
+<!-- Modal Inhabilitar Presupuesto -->
+<div class="modal fade" id="inhabilitarPresupuestoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhabilitar Presupuesto</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" action="{% url 'presupuestos:inhabilitar_presupuesto' presupuesto.id_presupuesto %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>¿Estás seguro de inhabilitar el presupuesto <strong>{{ presupuesto.numero_presupuesto }}</strong>?</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo de inhabilitación <span class="text-danger">*</span></label>
+            <textarea name="motivo_inhabilitacion" class="form-control" rows="3" required placeholder="Escriba el motivo por el cual se inhabilita este registro..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_js %}

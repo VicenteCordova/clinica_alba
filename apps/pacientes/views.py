@@ -10,7 +10,7 @@ from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import PermissionDenied
 
-from apps.core.mixins import RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin, InhabilitarBaseView
 from apps.pacientes.models import Paciente
 from apps.personas.models import Persona
 from apps.pacientes.forms import PersonaBaseForm, PacienteForm
@@ -19,8 +19,8 @@ from apps.auditoria.models import Bitacora
 from apps.core.permissions import puede_ver_imagenologia
 
 
-class PacienteListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class PacienteListView(PermisoRequeridoMixin, ListView):
+    permission_required = "pacientes.view_paciente"
     template_name = "pacientes/lista.html"
     context_object_name = "pacientes"
     paginate_by = 25
@@ -30,7 +30,7 @@ class PacienteListView(RolRequeridoMixin, ListView):
     )
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().filter(activo=True)
         if self.request.user.tiene_rol("odontologo") and not self.request.user.tiene_rol(
             "administrador", "director", "director_clinico"
         ):
@@ -56,8 +56,8 @@ class PacienteListView(RolRequeridoMixin, ListView):
         return ctx
 
 
-class PacienteCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class PacienteCrearView(PermisoRequeridoMixin, View):
+    permission_required = "pacientes.add_paciente"
     template_name = "pacientes/crear.html"
 
     def get(self, request):
@@ -95,8 +95,8 @@ class PacienteCrearView(RolRequeridoMixin, View):
         })
 
 
-class PacienteDetalleView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class PacienteDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "pacientes.view_paciente"
     template_name = "pacientes/detalle.html"
 
     def get(self, request, pk):
@@ -193,8 +193,8 @@ class PacienteDetalleView(RolRequeridoMixin, View):
         })
 
 
-class PacienteEditarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class PacienteEditarView(PermisoRequeridoMixin, View):
+    permission_required = "pacientes.change_paciente"
     template_name = "pacientes/editar.html"
 
     def get(self, request, pk):
@@ -232,8 +232,8 @@ class PacienteEditarView(RolRequeridoMixin, View):
         })
 
 
-class PacienteBuscarHTMXView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista", "odontologo", "director", "director_clinico"]
+class PacienteBuscarHTMXView(PermisoRequeridoMixin, View):
+    permission_required = "pacientes.view_paciente"
     """Vista HTMX para búsqueda de pacientes en el topbar."""
     template_name = "pacientes/partials/resultados_busqueda.html"
 
@@ -256,6 +256,15 @@ class PacienteBuscarHTMXView(RolRequeridoMixin, View):
                 "administrador", "director", "director_clinico"
             ):
                 pacientes_qs = pacientes_qs.filter(citas__id_odontologo__id_usuario=request.user)
-            pacientes = pacientes_qs.distinct()[:10]
+            pacientes = pacientes_qs.filter(activo=True).distinct()[:10]
             
         return render(request, self.template_name, {"pacientes": pacientes, "q": q})
+
+
+class PacienteInhabilitarView(InhabilitarBaseView):
+    permission_required = "pacientes.disable_paciente"
+    model = Paciente
+    modulo_auditoria = "pacientes"
+    
+    def get_url_redirect(self):
+        return reverse_lazy("pacientes:lista")

@@ -6,6 +6,7 @@ Tablas: piezas_dentales, caras_dentales, condiciones_odontologicas,
 """
 from django.db import models
 from django.utils import timezone
+from apps.core.models import InhabilitableModel
 from django.core.exceptions import ValidationError
 
 
@@ -82,7 +83,7 @@ class CondicionOdontologica(models.Model):
         return self.nombre
 
 
-class Odontograma(models.Model):
+class Odontograma(InhabilitableModel):
     """
     Tabla: odontogramas
 
@@ -146,6 +147,10 @@ class Odontograma(models.Model):
         unique_together = [("id_ficha_clinica", "version")]
         verbose_name = "Odontograma"
         verbose_name_plural = "Odontogramas"
+        permissions = [
+            ("disable_odontograma", "Puede inhabilitar odontograma"),
+            ("reactivate_odontograma", "Puede reactivar odontograma"),
+        ]
         ordering = ["-version"]
         indexes = [
             models.Index(fields=["id_ficha_clinica"], name="idx_odontogramas_ficha"),

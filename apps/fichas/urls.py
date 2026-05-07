@@ -16,4 +16,7 @@ urlpatterns = [
     path("evolucion/<int:pk>/", views.EvolucionDetalleView.as_view(), name="evolucion_detalle"),
     path("evolucion/<int:pk>/editar/", views.EvolucionEditarView.as_view(), name="evolucion_editar"),
     path("evolucion/<int:pk>/adjunto/", views.AdjuntoSubirView.as_view(), name="adjunto_subir"),
+    path("ficha/<int:pk>/inhabilitar/", views.FichaInhabilitarView.as_view(), name="inhabilitar_ficha"),
+    path("evolucion/<int:pk>/inhabilitar/", views.EvolucionInhabilitarView.as_view(), name="inhabilitar_evolucion"),
+    path("adjunto/<int:pk>/inhabilitar/", views.AdjuntoInhabilitarView.as_view(), name="inhabilitar_adjunto"),
 ]

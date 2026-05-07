@@ -5,9 +5,11 @@ Tabla: pacientes
 """
 from django.db import models
 from django.utils import timezone
+from apps.core.models import InhabilitableModel, AuditableModel
+from django.utils import timezone
 
 
-class Paciente(models.Model):
+class Paciente(InhabilitableModel, AuditableModel):
     """Tabla: pacientes"""
 
     id_paciente = models.AutoField(primary_key=True)
@@ -26,6 +28,10 @@ class Paciente(models.Model):
         db_table = "pacientes"
         verbose_name = "Paciente"
         verbose_name_plural = "Pacientes"
+        permissions = [
+            ("disable_paciente", "Puede inhabilitar paciente"),
+            ("reactivate_paciente", "Puede reactivar paciente"),
+        ]
         indexes = [
             models.Index(fields=["id_persona"], name="idx_pacientes_persona"),
         ]

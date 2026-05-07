@@ -5,7 +5,7 @@ from django.views.generic import ListView
 from django.contrib import messages
 from django.db import transaction
 
-from apps.core.mixins import RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin
 from apps.antecedentes.models import (
     CatalogoAntecedente, RegistroAntecedentesMedicos, RegistroAntecedenteDetalle
 )
@@ -13,15 +13,15 @@ from apps.pacientes.models import Paciente
 from apps.auditoria.models import Bitacora
 
 
-class CatalogoListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico"]
+class CatalogoListView(PermisoRequeridoMixin, ListView):
+    permission_required = "antecedentes.view_catalogoantecedente"
     template_name = "antecedentes/catalogo.html"
     context_object_name = "antecedentes"
     queryset = CatalogoAntecedente.objects.filter(estado_antecedente="activo").order_by("tipo_antecedente", "nombre")
 
 
-class AntecedentesPacienteView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico"]
+class AntecedentesPacienteView(PermisoRequeridoMixin, View):
+    permission_required = "antecedentes.view_registroantecedentesmedicos"
     template_name = "antecedentes/lista.html"
 
     def get(self, request, paciente_id):
@@ -38,8 +38,8 @@ class AntecedentesPacienteView(RolRequeridoMixin, View):
         })
 
 
-class RegistrarAntecedentesView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico"]
+class RegistrarAntecedentesView(PermisoRequeridoMixin, View):
+    permission_required = "antecedentes.add_registroantecedentesmedicos"
     template_name = "antecedentes/registro_form.html"
 
     def get(self, request, paciente_id):
@@ -86,8 +86,8 @@ class RegistrarAntecedentesView(RolRequeridoMixin, View):
         return redirect("antecedentes:lista", paciente_id=paciente_id)
 
 
-class EditarAntecedentesView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "odontologo", "director", "director_clinico"]
+class EditarAntecedentesView(PermisoRequeridoMixin, View):
+    permission_required = "antecedentes.change_registroantecedentesmedicos"
     """Editar un registro de antecedentes existente."""
     template_name = "antecedentes/registro_form.html"
 

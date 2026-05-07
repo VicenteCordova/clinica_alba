@@ -6,14 +6,14 @@ from django.views import View
 from django.views.generic import ListView
 from django.contrib import messages
 
-from apps.core.mixins import RolRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin
 from apps.personas.models import Persona, Sexo
 from apps.pacientes.forms import PersonaBaseForm
 from apps.auditoria.models import Bitacora
 
 
-class PersonaListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class PersonaListView(PermisoRequeridoMixin, ListView):
+    permission_required = "personas.view_persona"
     template_name = "personas/lista.html"
     context_object_name = "personas"
     paginate_by = 25
@@ -34,8 +34,8 @@ class PersonaListView(RolRequeridoMixin, ListView):
         return ctx
 
 
-class PersonaCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class PersonaCrearView(PermisoRequeridoMixin, View):
+    permission_required = "personas.add_persona"
     template_name = "personas/crear.html"
 
     def get(self, request):
@@ -59,8 +59,8 @@ class PersonaCrearView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"form": form})
 
 
-class PersonaDetalleView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class PersonaDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "personas.view_persona"
     template_name = "personas/detalle.html"
 
     def get(self, request, pk):
@@ -68,8 +68,8 @@ class PersonaDetalleView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"persona": persona})
 
 
-class PersonaEditarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador", "administrativo", "recepcionista"]
+class PersonaEditarView(PermisoRequeridoMixin, View):
+    permission_required = "personas.change_persona"
     template_name = "personas/editar.html"
 
     def get(self, request, pk):

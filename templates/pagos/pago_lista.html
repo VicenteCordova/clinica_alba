@@ -112,7 +112,7 @@
               {% endif %}
             </td>
             <td>
-              {% if pago.estado_pago == 'vigente' and request.user|user_tiene_rol:"cajero,administrador" %}
+              {% if pago.estado_pago == 'vigente' and perms.pagos.change_pago %}
               <a href="{% url 'pagos:anular' pago.id_pago %}" class="btn btn-sm btn-outline-danger" title="Anular Pago">
                 <i class="bi bi-x-circle"></i>
               </a>

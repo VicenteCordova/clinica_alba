@@ -11,7 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.views import View
 
 from apps.auditoria.models import Bitacora
-from apps.core.mixins import LoginRequeridoMixin
+from apps.core.mixins import PermisoRequeridoMixin, InhabilitarBaseView
 from apps.core.permissions import puede_editar_clinico, puede_ver_clinico
 from apps.fichas.models import EvolucionClinica, FichaClinica
 from apps.odontograma.models import (
@@ -337,7 +337,8 @@ def _json_body(request):
         raise ValidationError("Solicitud JSON invalida.")
 
 
-class OdontogramaCrearView(LoginRequeridoMixin, View):
+class OdontogramaCrearView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.add_odontograma"
     def get(self, request, ficha_id):
         if not puede_editar_clinico(request.user):
             raise PermissionDenied("No tienes permisos para crear odontogramas.")
@@ -387,7 +388,8 @@ class OdontogramaCrearView(LoginRequeridoMixin, View):
         return redirect("odontograma:detalle", pk=odontograma.id_odontograma)
 
 
-class OdontogramaDetalleView(LoginRequeridoMixin, View):
+class OdontogramaDetalleView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.view_odontograma"
     template_name = "odontograma/detalle.html"
 
     def get(self, request, pk):
@@ -446,7 +448,8 @@ class OdontogramaDetalleView(LoginRequeridoMixin, View):
         })
 
 
-class OdontogramaDetalleGuardarView(LoginRequeridoMixin, View):
+class OdontogramaDetalleGuardarView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.change_odontograma"
     """Endpoint compatible con el formulario clasico."""
 
     def post(self, request, pk):
@@ -536,7 +539,8 @@ class OdontogramaDetalleGuardarView(LoginRequeridoMixin, View):
         return redirect("odontograma:detalle", pk=pk)
 
 
-class OdontogramaPiezaAPIView(LoginRequeridoMixin, View):
+class OdontogramaPiezaAPIView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.view_odontograma"
     """Obtiene el estado completo de una pieza sin crear registros al visualizar."""
 
     def get(self, request, odontograma_id, codigo_pieza):
@@ -628,7 +632,8 @@ class OdontogramaPiezaAPIView(LoginRequeridoMixin, View):
         })
 
 
-class OdontogramaActualizarEstadoAPIView(LoginRequeridoMixin, View):
+class OdontogramaActualizarEstadoAPIView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.change_odontograma"
     def post(self, request, odontograma_id, codigo_pieza):
         odontograma = get_object_or_404(Odontograma, pk=odontograma_id)
         _validar_acceso_odontograma(request, odontograma, edicion=True)
@@ -670,7 +675,8 @@ class OdontogramaActualizarEstadoAPIView(LoginRequeridoMixin, View):
             return _json_error(str(exc))
 
 
-class OdontogramaActualizarSuperficieAPIView(LoginRequeridoMixin, View):
+class OdontogramaActualizarSuperficieAPIView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.change_odontograma"
     def post(self, request, odontograma_id, codigo_pieza):
         odontograma = get_object_or_404(Odontograma, pk=odontograma_id)
         _validar_acceso_odontograma(request, odontograma, edicion=True)
@@ -746,7 +752,8 @@ class OdontogramaActualizarSuperficieAPIView(LoginRequeridoMixin, View):
             return _json_error(str(exc))
 
 
-class OdontogramaActualizarRaizAPIView(LoginRequeridoMixin, View):
+class OdontogramaActualizarRaizAPIView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.change_odontograma"
     def post(self, request, odontograma_id, codigo_pieza):
         odontograma = get_object_or_404(Odontograma, pk=odontograma_id)
         _validar_acceso_odontograma(request, odontograma, edicion=True)
@@ -815,7 +822,8 @@ class OdontogramaActualizarRaizAPIView(LoginRequeridoMixin, View):
             return _json_error(str(exc))
 
 
-class OdontogramaDescripcionAPIView(LoginRequeridoMixin, View):
+class OdontogramaDescripcionAPIView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.change_odontograma"
     def post(self, request, odontograma_id):
         odontograma = get_object_or_404(Odontograma, pk=odontograma_id)
         _validar_acceso_odontograma(request, odontograma, edicion=True)
@@ -847,7 +855,8 @@ class OdontogramaDescripcionAPIView(LoginRequeridoMixin, View):
             return _json_error(str(exc))
 
 
-class OdontogramaActualizarPeriodontoAPIView(LoginRequeridoMixin, View):
+class OdontogramaActualizarPeriodontoAPIView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.change_odontograma"
     def post(self, request, odontograma_id, codigo_pieza):
         odontograma = get_object_or_404(Odontograma, pk=odontograma_id)
         _validar_acceso_odontograma(request, odontograma, edicion=True)
@@ -894,7 +903,8 @@ class OdontogramaActualizarPeriodontoAPIView(LoginRequeridoMixin, View):
             return _json_error(str(exc))
 
 
-class OdontogramaEnviarPlanAPIView(LoginRequeridoMixin, View):
+class OdontogramaEnviarPlanAPIView(PermisoRequeridoMixin, View):
+    permission_required = "odontograma.change_odontograma"
     """Crea o agrega un ítem al plan de tratamiento activo desde el odontograma."""
 
     def post(self, request, odontograma_id):
@@ -1029,3 +1039,15 @@ class OdontogramaEnviarPlanAPIView(LoginRequeridoMixin, View):
             return JsonResponse(res)
         except ValidationError as exc:
             return _json_error(str(exc))
+
+
+from django.urls import reverse_lazy
+
+class OdontogramaInhabilitarView(InhabilitarBaseView):
+    permission_required = "odontograma.disable_odontograma"
+    model = Odontograma
+    modulo_auditoria = "odontograma"
+
+    def get_url_redirect(self):
+        obj = Odontograma.objects.get(pk=self.kwargs['pk'])
+        return reverse_lazy("fichas:detalle", kwargs={"paciente_id": obj.id_ficha_clinica.id_paciente_id})

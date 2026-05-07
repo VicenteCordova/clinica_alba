@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load core_tags humanize %}
 {% block title %}Cita #{{ cita.id_cita }} — {{ CLINICA_NOMBRE }}{% endblock %}
 {% block topbar_title %}Detalle de Cita{% endblock %}
@@ -12,7 +12,12 @@
   <div class="d-flex gap-2 flex-wrap">
     <span class="badge-estado {{ cita.id_estado_cita.nombre }}" style="font-size:14px;padding:6px 16px;">{{ cita.id_estado_cita.nombre }}</span>
     {% if cita.id_estado_cita.nombre == "en_espera" or cita.id_estado_cita.nombre == "en_atencion" %}
-    <a href="{% url 'fichas:modo_atencion' cita.id_cita %}" class="btn btn-clinical"><i class="bi bi-play-circle" aria-hidden="true"></i> Iniciar atención</a>
+      {% if perms.fichas.add_evolucionclinica %}
+      <a href="{% url 'fichas:modo_atencion' cita.id_cita %}" class="btn btn-clinical"><i class="bi bi-play-circle" aria-hidden="true"></i> Iniciar atención</a>
+      {% endif %}
+    {% endif %}
+    {% if perms.agenda.disable_cita %}
+    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#inhabilitarCitaModal"><i class="bi bi-trash"></i> Inhabilitar</button>
     {% endif %}
   </div>
 </div>
@@ -69,16 +74,20 @@
     <div class="card mb-4">
       <div class="card-header"><h2 class="card-title"><i class="bi bi-gear me-2" aria-hidden="true"></i>Gestión de estado</h2></div>
       <div class="card-body d-flex gap-2 flex-wrap">
-        {% if cita.id_estado_cita.nombre == "pendiente" %}
-        <button class="btn btn-outline" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'confirmada' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none"><i class="bi bi-telephone-check" aria-hidden="true"></i> Confirmar</button>
+        {% if perms.agenda.change_cita %}
+          {% if cita.id_estado_cita.nombre == "pendiente" %}
+          <button class="btn btn-outline" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'confirmada' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none"><i class="bi bi-telephone-check" aria-hidden="true"></i> Confirmar</button>
+          {% endif %}
+          {% if cita.id_estado_cita.nombre == "pendiente" or cita.id_estado_cita.nombre == "confirmada" %}
+          <button class="btn btn-warning" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'en_espera' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none"><i class="bi bi-person-check-fill" aria-hidden="true"></i> Paciente llegó</button>
+          {% endif %}
+          {% if cita.id_estado_cita.nombre != "cancelada" and cita.id_estado_cita.nombre != "atendida" %}
+          <button class="btn btn-danger" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'cancelada' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none" hx-confirm="¿Confirmas la cancelación de esta cita?"><i class="bi bi-x-circle" aria-hidden="true"></i> Cancelar cita</button>
+          {% endif %}
         {% endif %}
-        {% if cita.id_estado_cita.nombre == "pendiente" or cita.id_estado_cita.nombre == "confirmada" %}
-        <button class="btn btn-warning" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'en_espera' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none"><i class="bi bi-person-check-fill" aria-hidden="true"></i> Paciente llegó</button>
-        {% endif %}
-        {% if cita.id_estado_cita.nombre != "cancelada" and cita.id_estado_cita.nombre != "atendida" %}
-        <button class="btn btn-danger" hx-post="{% url 'agenda:cambiar_estado_htmx' cita.id_cita 'cancelada' %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' hx-swap="none" hx-confirm="¿Confirmas la cancelación de esta cita?"><i class="bi bi-x-circle" aria-hidden="true"></i> Cancelar cita</button>
-        {% endif %}
+        {% if perms.agenda.add_cita %}
         <a href="{% url 'agenda:crear_cita' %}?paciente={{ cita.id_paciente_id }}" class="btn btn-outline"><i class="bi bi-calendar-plus" aria-hidden="true"></i> Reagendar</a>
+        {% endif %}
       </div>
     </div>
 
@@ -129,4 +138,31 @@
     </div>
   </div>
 </div>
+
+<!-- Modal Inhabilitar Cita -->
+<div class="modal fade" id="inhabilitarCitaModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhabilitar Cita</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" action="{% url 'agenda:inhabilitar_cita' cita.id_cita %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>¿Estás seguro de inhabilitar la cita #{{ cita.id_cita }} de <strong>{{ cita.id_paciente.nombre_completo }}</strong>?</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo de inhabilitación <span class="text-danger">*</span></label>
+            <textarea name="motivo_inhabilitacion" class="form-control" rows="3" required placeholder="Escriba el motivo por el cual se inhabilita este registro..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar Cita</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 {% endblock %}

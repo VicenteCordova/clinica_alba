@@ -9,7 +9,12 @@
     <h1 class="page-title">Catálogo de tratamientos</h1>
     <p class="page-subtitle">{{ tratamientos|length }} tratamiento{{ tratamientos|length|pluralize }} disponible{{ tratamientos|length|pluralize }}</p>
   </div>
-  <a href="{% url 'tratamientos:planes' %}" class="btn btn-outline"><i class="bi bi-clipboard2-check"></i> Ver planes</a>
+  <div class="d-flex gap-2">
+    <a href="{% url 'tratamientos:planes' %}" class="btn btn-outline"><i class="bi bi-clipboard2-check"></i> Ver planes</a>
+    {% if perms.tratamientos.add_tratamiento %}
+    <a href="{% url 'tratamientos:crear' %}" class="btn btn-primary"><i class="bi bi-plus-circle"></i> Nuevo tratamiento</a>
+    {% endif %}
+  </div>
 </div>
 
 <div class="row g-3">
@@ -39,6 +44,14 @@
           </div>
           {% endif %}
         </div>
+        <div class="mt-3 d-flex gap-2">
+          {% if perms.tratamientos.change_tratamiento %}
+          <a href="{% url 'tratamientos:editar' t.id_tratamiento %}" class="btn btn-outline btn-sm flex-fill"><i class="bi bi-pencil"></i> Editar</a>
+          {% endif %}
+          {% if perms.tratamientos.disable_tratamiento %}
+          <button type="button" class="btn btn-outline-danger btn-sm flex-fill" data-bs-toggle="modal" data-bs-target="#inhabilitarTratamientoModal" onclick="document.getElementById('inhabilitarForm').action='{% url 'tratamientos:inhabilitar_tratamiento' t.id_tratamiento %}'; document.getElementById('tratNombre').innerText='{{ t.nombre|escapejs }}';"><i class="bi bi-trash"></i> Inhabilitar</button>
+          {% endif %}
+        </div>
       </div>
     </div>
   </div>
@@ -52,4 +65,34 @@
   </div>
   {% endfor %}
 </div>
+</div>
+
+{% if perms.tratamientos.disable_tratamiento %}
+<!-- Modal Inhabilitar Tratamiento -->
+<div class="modal fade" id="inhabilitarTratamientoModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhabilitar Tratamiento</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" id="inhabilitarForm" action="">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>¿Estás seguro de inhabilitar el tratamiento <strong id="tratNombre"></strong>?</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo de inhabilitación <span class="text-danger">*</span></label>
+            <textarea name="motivo_inhabilitacion" class="form-control" rows="3" required placeholder="Escriba el motivo por el cual se inhabilita este registro..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}

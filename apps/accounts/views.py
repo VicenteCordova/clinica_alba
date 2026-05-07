@@ -18,7 +18,7 @@ from apps.accounts.forms import (
 )
 from apps.accounts.models import Rol, Usuario
 from apps.auditoria.models import Bitacora
-from apps.core.mixins import LoginRequeridoMixin, RolRequeridoMixin
+from apps.core.mixins import LoginRequeridoMixin, PermisoRequeridoMixin
 from apps.pacientes.forms import PersonaBaseForm
 
 
@@ -94,8 +94,8 @@ class CambiarPasswordView(LoginRequeridoMixin, View):
         return render(request, self.template_name, {"form": form})
 
 
-class UsuarioListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador"]
+class UsuarioListView(PermisoRequeridoMixin, ListView):
+    permission_required = "accounts.view_usuario"
     template_name = "accounts/usuarios_lista.html"
     context_object_name = "usuarios"
     paginate_by = 25
@@ -119,8 +119,8 @@ class UsuarioListView(RolRequeridoMixin, ListView):
         return ctx
 
 
-class UsuarioCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class UsuarioCrearView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.add_usuario"
     template_name = "accounts/usuario_form.html"
 
     def get(self, request):
@@ -161,8 +161,8 @@ class UsuarioCrearView(RolRequeridoMixin, View):
         })
 
 
-class UsuarioEditarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class UsuarioEditarView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.change_usuario"
     template_name = "accounts/usuario_form.html"
 
     def get(self, request, pk):
@@ -218,8 +218,8 @@ class UsuarioEditarView(RolRequeridoMixin, View):
         })
 
 
-class UsuarioDesactivarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class UsuarioDesactivarView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.disable_usuario"
 
     def post(self, request, pk):
         usuario = get_object_or_404(Usuario, pk=pk)
@@ -245,8 +245,8 @@ class UsuarioDesactivarView(RolRequeridoMixin, View):
         return redirect("accounts:usuarios_lista")
 
 
-class UsuarioActivarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class UsuarioActivarView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.reactivate_usuario"
 
     def post(self, request, pk):
         usuario = get_object_or_404(Usuario, pk=pk)
@@ -269,8 +269,8 @@ class UsuarioActivarView(RolRequeridoMixin, View):
         return redirect("accounts:usuarios_lista")
 
 
-class UsuarioResetPasswordView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class UsuarioResetPasswordView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.reset_password_usuario"
     template_name = "accounts/usuario_reset_password.html"
 
     def get(self, request, pk):
@@ -304,15 +304,15 @@ class UsuarioResetPasswordView(RolRequeridoMixin, View):
         })
 
 
-class RolListView(RolRequeridoMixin, ListView):
-    roles_permitidos = ["administrador"]
+class RolListView(PermisoRequeridoMixin, ListView):
+    permission_required = "accounts.view_rol"
     template_name = "accounts/roles_lista.html"
     context_object_name = "roles"
     queryset = Rol.objects.order_by("nombre")
 
 
-class RolCrearView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class RolCrearView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.add_rol"
     template_name = "accounts/rol_form.html"
 
     def get(self, request):
@@ -337,8 +337,8 @@ class RolCrearView(RolRequeridoMixin, View):
         return render(request, self.template_name, {"form": form, "titulo": "Nuevo rol"})
 
 
-class RolEditarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class RolEditarView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.change_rol"
     template_name = "accounts/rol_form.html"
 
     def get(self, request, pk):
@@ -376,8 +376,8 @@ class RolEditarView(RolRequeridoMixin, View):
         })
 
 
-class RolDesactivarView(RolRequeridoMixin, View):
-    roles_permitidos = ["administrador"]
+class RolDesactivarView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.disable_rol"
 
     def post(self, request, pk):
         rol = get_object_or_404(Rol, pk=pk)
@@ -400,4 +400,28 @@ class RolDesactivarView(RolRequeridoMixin, View):
             datos_nuevos={"estado": rol.estado_rol},
         )
         messages.success(request, "Rol desactivado.")
+        return redirect("accounts:roles_lista")
+
+
+class RolActivarView(PermisoRequeridoMixin, View):
+    permission_required = "accounts.reactivate_rol"
+
+    def post(self, request, pk):
+        rol = get_object_or_404(Rol, pk=pk)
+        estado_anterior = rol.estado_rol
+        rol.estado_rol = Rol.ESTADO_ACTIVO
+        rol.save(update_fields=["estado_rol"])
+        Bitacora.registrar(
+            usuario=request.user,
+            modulo="accounts",
+            accion="activacion_rol",
+            tabla_afectada="roles",
+            id_registro_afectado=rol.id_rol,
+            objeto_afectado=rol.nombre,
+            descripcion=f"Rol activado: {rol.nombre}",
+            request=request,
+            datos_anteriores={"estado": estado_anterior},
+            datos_nuevos={"estado": rol.estado_rol},
+        )
+        messages.success(request, "Rol activado.")
         return redirect("accounts:roles_lista")

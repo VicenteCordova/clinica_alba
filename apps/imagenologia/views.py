@@ -20,6 +20,8 @@ from .forms import ExamenForm, MultipleArchivoForm, validar_archivo_clinico
 from apps.pacientes.models import Paciente
 from apps.auditoria.models import Bitacora
 from apps.core.permissions import puede_editar_imagenologia, puede_ver_imagenologia
+from apps.core.mixins import InhabilitarBaseView, PermisoRequeridoMixin
+from django.urls import reverse_lazy
 
 
 class ImagenologiaPermisoMixin(LoginRequiredMixin):
@@ -170,6 +172,16 @@ class ExamenCrearView(ImagenologiaPermisoMixin, View):
             "cita_id": request.POST.get("cita_id", ""),
             "evolucion_id": request.POST.get("evolucion_id", ""),
         })
+
+
+class ExamenInhabilitarView(InhabilitarBaseView):
+    permission_required = "imagenologia.disable_examenimagenologico"
+    model = ExamenImagenologico
+    modulo_auditoria = "imagenologia"
+
+    def get_url_redirect(self):
+        obj = ExamenImagenologico.objects.get(pk=self.kwargs['pk'])
+        return reverse_lazy("imagenologia:detalle", kwargs={"pk": obj.id_examen})
 
 
 class ExamenDetalleView(ImagenologiaPermisoMixin, DetailView):
@@ -450,22 +462,20 @@ class ObservacionCrearView(ImagenologiaPermisoMixin, View):
 
 
 from .models import TipoExamenImagenologico
-class TipoExamenListView(ImagenologiaPermisoMixin, ListView):
+class TipoExamenListView(PermisoRequeridoMixin, ListView):
+    permission_required = "imagenologia.view_tipoexamenimagenologico"
     model = TipoExamenImagenologico
     template_name = "imagenologia/tipo_examen_list.html"
     context_object_name = "tipos"
 
-class TipoExamenCrearView(ImagenologiaPermisoMixin, View):
+class TipoExamenCrearView(PermisoRequeridoMixin, View):
+    permission_required = "imagenologia.add_tipoexamenimagenologico"
     template_name = "imagenologia/tipo_examen_form.html"
 
     def get(self, request):
-        if not request.user.tiene_rol("administrador"):
-            raise PermissionDenied("Solo administracion puede crear tipos de examen.")
         return render(request, self.template_name, {"accion": "Crear"})
 
     def post(self, request):
-        if not request.user.tiene_rol("administrador"):
-            raise PermissionDenied("Solo administracion puede crear tipos de examen.")
         nombre = request.POST.get("nombre")
         descripcion = request.POST.get("descripcion")
         if nombre:
@@ -475,18 +485,15 @@ class TipoExamenCrearView(ImagenologiaPermisoMixin, View):
         messages.error(request, "El nombre es obligatorio.")
         return render(request, self.template_name, {"accion": "Crear"})
 
-class TipoExamenEditarView(ImagenologiaPermisoMixin, View):
+class TipoExamenEditarView(PermisoRequeridoMixin, View):
+    permission_required = "imagenologia.change_tipoexamenimagenologico"
     template_name = "imagenologia/tipo_examen_form.html"
 
     def get(self, request, pk):
-        if not request.user.tiene_rol("administrador"):
-            raise PermissionDenied("Solo administracion puede editar tipos de examen.")
         tipo = get_object_or_404(TipoExamenImagenologico, pk=pk)
         return render(request, self.template_name, {"accion": "Editar", "tipo": tipo})
 
     def post(self, request, pk):
-        if not request.user.tiene_rol("administrador"):
-            raise PermissionDenied("Solo administracion puede editar tipos de examen.")
         tipo = get_object_or_404(TipoExamenImagenologico, pk=pk)
         nombre = request.POST.get("nombre")
         descripcion = request.POST.get("descripcion")

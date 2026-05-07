@@ -12,6 +12,10 @@ INTERNAL_IPS = ["127.0.0.1"]
 # Email en consola durante desarrollo
 EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
+# Desactivar el storage con manifiesto de WhiteNoise en desarrollo/tests
+# para no requerir collectstatic constante
+STATICFILES_STORAGE = "django.contrib.staticfiles.storage.StaticFilesStorage"
+
 # Queries más lentas en consola (útil para detectar N+1)
 LOGGING = {
     "version": 1,

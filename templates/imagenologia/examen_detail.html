@@ -9,8 +9,13 @@
     <p class="page-subtitle">Paciente: <a href="{% url 'pacientes:detalle' examen.paciente_id %}">{{ examen.paciente.nombre_completo }}</a></p>
   </div>
   <div>
+    {% if perms.imagenologia.change_examenimagenologico %}
     <a href="{% url 'imagenologia:editar' examen.id_examen %}" class="btn btn-outline-primary me-2"><i class="bi bi-pencil"></i> Editar</a>
+    {% endif %}
     <a href="{% url 'imagenologia:paciente_lista' examen.paciente_id %}" class="btn btn-outline">Volver</a>
+    {% if perms.imagenologia.disable_examenimagenologico %}
+    <button type="button" class="btn btn-outline-danger ms-2" data-bs-toggle="modal" data-bs-target="#inhabilitarExamenModal"><i class="bi bi-trash"></i> Inhabilitar</button>
+    {% endif %}
   </div>
 </div>
 
@@ -37,13 +42,18 @@
                 <div class="text-muted small">{{ archivo.fecha_subida|date:"d/m/Y H:i" }} - {{ archivo.extension|upper }} - {{ archivo.peso_bytes|filesizeformat }}</div>
                 <div class="d-flex gap-2 mt-2">
                   <a href="{% url 'imagenologia:ver_archivo' archivo.id_archivo %}" target="_blank" class="btn btn-outline btn-sm"><i class="bi bi-eye"></i> Ver</a>
+                  {% if perms.imagenologia.download_archivoexamenimagenologico %}
                   <a href="{% url 'imagenologia:descargar_archivo' archivo.id_archivo %}" class="btn btn-primary btn-sm"><i class="bi bi-download"></i> Descargar</a>
+                  {% endif %}
+                  {% if perms.imagenologia.disable_archivoexamenimagenologico %}
                   <form action="{% url 'imagenologia:eliminar_archivo' archivo.id_archivo %}" method="post" class="d-inline" onsubmit="return confirm('Anular este archivo de forma logica?');">
                     {% csrf_token %}
                     <input type="hidden" name="motivo_anulacion" value="Adjunto anulado desde ficha clinica">
                     <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
                   </form>
+                  {% endif %}
                 </div>
+                {% if perms.imagenologia.change_examenimagenologico %}
                 <form action="{% url 'imagenologia:reemplazar_archivo' archivo.id_archivo %}" method="post" enctype="multipart/form-data" class="mt-2">
                   {% csrf_token %}
                   <input type="hidden" name="motivo_anulacion" value="Adjunto reemplazado por version corregida">
@@ -52,6 +62,7 @@
                     <button type="submit" class="btn btn-outline-primary"><i class="bi bi-arrow-repeat"></i> Reemplazar</button>
                   </div>
                 </form>
+                {% endif %}
               </div>
             </div>
           </div>
@@ -60,6 +71,7 @@
           {% endfor %}
         </div>
       </div>
+      {% if perms.imagenologia.change_examenimagenologico %}
       <div class="card-footer">
         <form action="{% url 'imagenologia:subir_archivo' examen.id_examen %}" method="post" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
           {% csrf_token %}
@@ -67,6 +79,7 @@
           <button type="submit" class="btn btn-sm btn-success text-nowrap"><i class="bi bi-upload"></i> Subir</button>
         </form>
       </div>
+      {% endif %}
     </div>
 
     <div class="alert alert-info d-flex align-items-center">
@@ -106,6 +119,7 @@
           {% endfor %}
         </ul>
       </div>
+      {% if perms.imagenologia.add_observacionimagenologica %}
       <div class="card-footer">
         <form action="{% url 'imagenologia:crear_observacion' examen.id_examen %}" method="post">
           {% csrf_token %}
@@ -115,7 +129,37 @@
           </div>
         </form>
       </div>
+      {% endif %}
     </div>
   </div>
 </div>
+
+{% if perms.imagenologia.disable_examenimagenologico %}
+<!-- Modal Inhabilitar Examen -->
+<div class="modal fade" id="inhabilitarExamenModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Inhabilitar Examen</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+      </div>
+      <form method="post" action="{% url 'imagenologia:inhabilitar_examen' examen.id_examen %}">
+        {% csrf_token %}
+        <div class="modal-body">
+          <p>¿Estás seguro de inhabilitar el examen de <strong>{{ examen.tipo_examen.nombre }}</strong>?</p>
+          <div class="mb-3">
+            <label class="form-label">Motivo de inhabilitación <span class="text-danger">*</span></label>
+            <textarea name="motivo_inhabilitacion" class="form-control" rows="3" required placeholder="Escriba el motivo por el cual se inhabilita este registro..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
 {% endblock %}
