@@ -1,0 +1,35 @@
+{% comment %}
+Partial: _kpi_card.html
+
+Uso:
+  {% include 'partials/_kpi_card.html' with
+      icon="bi-calendar-check"
+      value=citas_hoy
+      label="Citas hoy"
+      color="celeste"
+      modifier=""
+      link_url=""
+  %}
+
+Parámetros:
+  icon      (str)  — clase de Bootstrap Icons sin 'bi-'
+  value     (any)  — valor principal a mostrar
+  label     (str)  — etiqueta descriptiva
+  color     (str)  — kpi-celeste | kpi-menta | kpi-lavanda | kpi-rosa | kpi-amarillo | kpi-melocoton
+  modifier  (str)  — clase extra opcional (kpi-card-success, kpi-card-danger, kpi-card-clinical, kpi-card-warning)
+  link_url  (str)  — si se provee, el card entero es clickable
+{% endcomment %}
+{% load core_tags %}
+{% if link_url %}
+<a href="{{ link_url }}" class="kpi-card {{ color }} {{ modifier }}" style="text-decoration:none;">
+  <div class="kpi-icon"><i class="bi bi-{{ icon }}" aria-hidden="true"></i></div>
+  <div class="kpi-value">{{ value }}</div>
+  <div class="kpi-label">{{ label }}</div>
+</a>
+{% else %}
+<div class="kpi-card {{ color }} {{ modifier }}">
+  <div class="kpi-icon"><i class="bi bi-{{ icon }}" aria-hidden="true"></i></div>
+  <div class="kpi-value">{{ value }}</div>
+  <div class="kpi-label">{{ label }}</div>
+</div>
+{% endif %}

@@ -1,7 +1,7 @@
 """
 apps/caja/models.py
 
-Tablas: tipos_movimiento_caja, cajas, movimientos_caja
+Tablas: tipos_movimiento_caja, cajas, movimientos_caja, libro_mayor
 """
 from django.db import models
 from django.utils import timezone
@@ -46,6 +46,14 @@ class Caja(models.Model):
     fecha_cierre = models.DateTimeField(null=True, blank=True)
     monto_inicial = models.DecimalField(max_digits=10, decimal_places=2)
     monto_final = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    diferencia_arqueo = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True,
+        help_text="monto_final - saldo_calculado al cierre. Negativo = faltante, positivo = sobrante."
+    )
+    observacion_cierre = models.CharField(
+        max_length=300, null=True, blank=True,
+        help_text="Justificación de diferencias en el arqueo."
+    )
     estado_caja = models.CharField(
         max_length=20, choices=ESTADO_CHOICES, default=ESTADO_ABIERTA
     )
@@ -122,6 +130,14 @@ class Caja(models.Model):
     def saldo_calculado(self):
         return self.monto_inicial + self.total_ingresos - self.total_egresos
 
+    @property
+    def arqueo_con_diferencia(self):
+        """True si la diferencia de arqueo es significativa (> 0 en abs)."""
+        if self.diferencia_arqueo is None:
+            return False
+        from decimal import Decimal
+        return abs(self.diferencia_arqueo) > Decimal("0")
+
 
 class MovimientoCaja(models.Model):
     """
@@ -196,3 +212,103 @@ class MovimientoCaja(models.Model):
                 raise ValidationError(
                     "El monto del movimiento debe coincidir con el monto del pago."
                 )
+
+
+# ─────────────────────────────────────────────
+# Libro Mayor
+# ─────────────────────────────────────────────
+
+class LibroMayorManager(models.Manager):
+    """Manager con helpers para consultas por período."""
+
+    def ingresos_periodo(self, fecha_desde, fecha_hasta):
+        from django.db.models import Sum
+        return (
+            self.filter(
+                tipo=EntradaLibroMayor.TIPO_INGRESO,
+                fecha__date__gte=fecha_desde,
+                fecha__date__lte=fecha_hasta,
+            ).aggregate(total=Sum("monto"))["total"] or 0
+        )
+
+    def egresos_periodo(self, fecha_desde, fecha_hasta):
+        from django.db.models import Sum
+        return (
+            self.filter(
+                tipo=EntradaLibroMayor.TIPO_EGRESO,
+                fecha__date__gte=fecha_desde,
+                fecha__date__lte=fecha_hasta,
+            ).aggregate(total=Sum("monto"))["total"] or 0
+        )
+
+    def balance_periodo(self, fecha_desde, fecha_hasta):
+        ingresos = self.ingresos_periodo(fecha_desde, fecha_hasta)
+        egresos = self.egresos_periodo(fecha_desde, fecha_hasta)
+        return ingresos - egresos
+
+
+class EntradaLibroMayor(models.Model):
+    """
+    Tabla: libro_mayor
+
+    Registro centralizado de todas las operaciones financieras de la clínica.
+    Se crea automáticamente al registrar/anular pagos y al cerrar cajas.
+    """
+
+    TIPO_INGRESO = "ingreso"
+    TIPO_EGRESO = "egreso"
+    TIPO_AJUSTE = "ajuste"
+    TIPO_CHOICES = [
+        (TIPO_INGRESO, "Ingreso"),
+        (TIPO_EGRESO, "Egreso"),
+        (TIPO_AJUSTE, "Ajuste"),
+    ]
+
+    id_entrada = models.AutoField(primary_key=True)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    monto = models.DecimalField(max_digits=12, decimal_places=2)
+    descripcion = models.CharField(max_length=300)
+    fecha = models.DateTimeField(default=timezone.now)
+
+    # Referencias opcionales para trazabilidad
+    id_caja = models.ForeignKey(
+        Caja,
+        db_column="id_caja",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="entradas_libro_mayor",
+    )
+    id_pago = models.ForeignKey(
+        "pagos.Pago",
+        db_column="id_pago",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="entradas_libro_mayor",
+    )
+    id_usuario = models.ForeignKey(
+        "accounts.Usuario",
+        db_column="id_usuario",
+        on_delete=models.RESTRICT,
+        related_name="entradas_libro_mayor",
+    )
+
+    objects = LibroMayorManager()
+
+    class Meta:
+        db_table = "libro_mayor"
+        verbose_name = "Entrada Libro Mayor"
+        verbose_name_plural = "Libro Mayor"
+        ordering = ["-fecha"]
+        indexes = [
+            models.Index(fields=["fecha"], name="idx_libro_mayor_fecha"),
+            models.Index(fields=["tipo"], name="idx_libro_mayor_tipo"),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=models.Q(monto__gt=0),
+                name="chk_libro_mayor_monto_positivo",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} ${self.monto:,.0f} — {self.fecha:%d/%m/%Y %H:%M}"

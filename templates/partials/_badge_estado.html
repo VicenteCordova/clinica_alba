@@ -1,0 +1,16 @@
+{% comment %}
+Partial: _badge_estado.html
+
+Muestra un badge de estado con el CSS class correcto.
+
+Uso:
+  {% include 'partials/_badge_estado.html' with estado=cita.id_estado_cita.nombre label="En espera" %}
+
+Parámetros:
+  estado  (str)  — valor de estado (pendiente, confirmada, en_espera, atendida, cancelada, etc.)
+  label   (str)  — texto a mostrar (opcional; si no se provee, se muestra estado capitalizado)
+  size    (str)  — 'sm' para font-size:10px, vacío para normal
+{% endcomment %}
+<span class="badge-estado {{ estado }}"{% if size == 'sm' %} style="font-size:10px;"{% endif %}>
+  {{ label|default:estado }}
+</span>

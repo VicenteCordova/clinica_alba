@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load core_tags humanize %}
 
 {% block title %}Dashboard — {{ CLINICA_NOMBRE }}{% endblock %}
@@ -26,7 +26,7 @@
   </div>
 </div>
 
-<!-- KPIs -->
+<!-- KPIs Operacionales -->
 <div class="kpi-grid">
   <div class="kpi-card kpi-celeste kpi-card-clinical">
     <div class="kpi-icon"><i class="bi bi-calendar-check" aria-hidden="true"></i></div>
@@ -60,9 +60,31 @@
   </div>
 </div>
 
-<div class="row g-4">
+<!-- KPIs Analíticos -->
+<div style="margin-top:8px;margin-bottom:4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--color-texto-muy-suave);">
+  Analítica — Últimos 30 días
+</div>
+<div class="kpi-grid" style="grid-template-columns:repeat(auto-fill,minmax(180px,1fr));">
+  <div class="kpi-card kpi-celeste">
+    <div class="kpi-icon"><i class="bi bi-graph-up-arrow" style="color:#0369a1;" aria-hidden="true"></i></div>
+    <div class="kpi-value" style="font-size:18px;">{{ ingresos_mes|pesos_cl }}</div>
+    <div class="kpi-label">Ingresos este mes</div>
+  </div>
+  <div class="kpi-card {% if tasa_no_show > 20 %}kpi-rosa{% else %}kpi-menta{% endif %}">
+    <div class="kpi-icon"><i class="bi bi-person-x" style="color:{% if tasa_no_show > 20 %}#991b1b{% else %}#065f46{% endif %};" aria-hidden="true"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ tasa_no_show }}%</div>
+    <div class="kpi-label">Tasa no-show (30d)</div>
+  </div>
+  <div class="kpi-card kpi-amarillo">
+    <div class="kpi-icon"><i class="bi bi-hourglass-split" style="color:#92400e;" aria-hidden="true"></i></div>
+    <div class="kpi-value" style="font-size:20px;">{{ presupuestos_pendientes_cobro }}</div>
+    <div class="kpi-label">Pendientes de cobro</div>
+  </div>
+</div>
+
+<div class="row g-4" style="margin-top:8px;">
   <!-- Próximas citas -->
-  <div class="col-lg-8">
+  <div class="col-lg-7">
     <div class="card">
       <div class="card-header">
         <h2 class="card-title"><i class="bi bi-calendar3 me-2" aria-hidden="true"></i>Citas próximas</h2>
@@ -109,8 +131,9 @@
     </div>
   </div>
 
-  <!-- Accesos rápidos + Gráfico -->
-  <div class="col-lg-4">
+  <!-- Panel lateral: Accesos + Gráficos + Top odontólogos -->
+  <div class="col-lg-5">
+    <!-- Acceso rápido -->
     <div class="card mb-4">
       <div class="card-header">
         <h2 class="card-title"><i class="bi bi-lightning me-2" aria-hidden="true"></i>Acceso rápido</h2>
@@ -125,21 +148,60 @@
         <a href="{% url 'caja:lista' %}" class="btn btn-outline">
           <i class="bi bi-cash-stack" aria-hidden="true"></i> Ir a caja
         </a>
+        <a href="{% url 'caja:libro_mayor' %}" class="btn btn-outline">
+          <i class="bi bi-journal-text" aria-hidden="true"></i> Libro Mayor
+        </a>
         <a href="{% url 'presupuestos:lista' %}" class="btn btn-outline">
           <i class="bi bi-receipt" aria-hidden="true"></i> Presupuestos
         </a>
         <a href="{% url 'auditoria:lista' %}" class="btn btn-ghost btn-sm">
-          <i class="bi bi-journal-text" aria-hidden="true"></i> Bitácora del sistema
+          <i class="bi bi-shield-check" aria-hidden="true"></i> Bitácora del sistema
         </a>
       </div>
     </div>
 
-    <div class="card">
+    <!-- Top odontólogos -->
+    {% if top_odontologos %}
+    <div class="card mb-4">
       <div class="card-header">
-        <h2 class="card-title"><i class="bi bi-pie-chart me-2" aria-hidden="true"></i>Citas 7 días</h2>
+        <h2 class="card-title"><i class="bi bi-trophy me-2" aria-hidden="true"></i>Top odontólogos (7d)</h2>
+      </div>
+      <div class="card-body p-0">
+        {% for od in top_odontologos %}
+        <div class="d-flex align-items-center justify-content-between p-3" style="border-bottom:1px solid var(--color-borde);">
+          <div class="d-flex align-items-center gap-2">
+            <div style="width:32px;height:32px;background:var(--color-lavanda);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;color:#5b21b6;" aria-hidden="true">
+              {{ forloop.counter }}
+            </div>
+            <span style="font-weight:600;font-size:13px;">
+              {{ od.id_odontologo__id_usuario__id_persona__nombres }}
+              {{ od.id_odontologo__id_usuario__id_persona__apellido_paterno }}
+            </span>
+          </div>
+          <span class="badge-estado confirmada" style="font-size:11px;">{{ od.total }} citas</span>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Gráfico ingresos diarios -->
+    <div class="card mb-4">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-bar-chart-line me-2" aria-hidden="true"></i>Ingresos 7 días</h2>
       </div>
       <div class="card-body">
-        <canvas id="chartCitasSemana" height="200" aria-label="Gráfico de citas por estado en los últimos 7 días" role="img"></canvas>
+        <canvas id="chartIngresosDiarios" height="160" aria-label="Gráfico de ingresos por día últimos 7 días" role="img"></canvas>
+      </div>
+    </div>
+
+    <!-- Gráfico citas doughnut -->
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title"><i class="bi bi-pie-chart me-2" aria-hidden="true"></i>Citas por estado (7d)</h2>
+      </div>
+      <div class="card-body">
+        <canvas id="chartCitasSemana" height="180" aria-label="Gráfico de citas por estado en los últimos 7 días" role="img"></canvas>
       </div>
     </div>
   </div>
@@ -149,15 +211,16 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script>
+// Gráfico de citas (doughnut)
 const citasData = {{ citas_semana_json|safe }};
-const labels = citasData.map(d => d.id_estado_cita__nombre || 'Sin estado');
-const valores = citasData.map(d => d.total);
+const labelsC = citasData.map(d => d.id_estado_cita__nombre || 'Sin estado');
+const valoresC = citasData.map(d => d.total);
 new Chart(document.getElementById('chartCitasSemana'), {
   type: 'doughnut',
   data: {
-    labels: labels,
+    labels: labelsC,
     datasets: [{
-      data: valores,
+      data: valoresC,
       backgroundColor: ['#d9f0ff','#ede9ff','#fde8d8','#dff7ea','#fee2e2','#f1f5f9'],
       borderColor: ['#2F80A6','#5b21b6','#9a3412','#065f46','#991b1b','#475569'],
       borderWidth: 2,
@@ -166,9 +229,50 @@ new Chart(document.getElementById('chartCitasSemana'), {
   options: {
     responsive: true,
     plugins: {
-      legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 12 }, padding: 14 } }
+      legend: { position: 'bottom', labels: { font: { family: 'Inter', size: 11 }, padding: 12 } }
     },
     cutout: '65%',
+  }
+});
+
+// Gráfico de ingresos diarios (barras)
+const ingresosData = {{ ingresos_diarios_json|safe }};
+const labelsI = ingresosData.map(d => d.label);
+const valoresI = ingresosData.map(d => d.total);
+new Chart(document.getElementById('chartIngresosDiarios'), {
+  type: 'bar',
+  data: {
+    labels: labelsI,
+    datasets: [{
+      label: 'Ingresos ($)',
+      data: valoresI,
+      backgroundColor: 'rgba(47,128,166,0.18)',
+      borderColor: '#2F80A6',
+      borderWidth: 2,
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: ctx => '$' + ctx.parsed.y.toLocaleString('es-CL')
+        }
+      }
+    },
+    scales: {
+      y: {
+        beginAtZero: true,
+        ticks: {
+          callback: v => '$' + v.toLocaleString('es-CL'),
+          font: { size: 10 }
+        },
+        grid: { color: 'rgba(0,0,0,0.05)' }
+      },
+      x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+    }
   }
 });
 </script>

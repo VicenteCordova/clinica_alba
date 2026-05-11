@@ -52,9 +52,10 @@ class CajaService:
 
     @staticmethod
     @transaction.atomic
-    def cerrar_caja(caja, usuario_cierre, monto_final: Decimal) -> "Caja":
+    def cerrar_caja(caja, usuario_cierre, monto_final: Decimal, observacion_cierre: str = "") -> "Caja":
         """
         Cierra una caja abierta con el arqueo final.
+        Calcula automáticamente la diferencia entre monto_final y el saldo calculado.
         Valida coherencia del estado (RN-05).
         """
         from apps.auditoria.models import Bitacora
@@ -65,13 +66,19 @@ class CajaService:
         if monto_final < 0:
             raise ValidationError("El monto final no puede ser negativo.")
 
+        saldo_esperado = caja.saldo_calculado
+        diferencia = monto_final - saldo_esperado
+
         caja.estado_caja = "cerrada"
         caja.fecha_cierre = timezone.now()
         caja.id_usuario_cierre = usuario_cierre
         caja.monto_final = monto_final
+        caja.diferencia_arqueo = diferencia
+        caja.observacion_cierre = observacion_cierre or None
         caja.full_clean()
         caja.save()
 
+        tipo_diferencia = "sobrante" if diferencia > 0 else ("faltante" if diferencia < 0 else "exacto")
         Bitacora.registrar(
             usuario=usuario_cierre,
             modulo="caja",
@@ -80,8 +87,9 @@ class CajaService:
             id_registro_afectado=caja.id_caja,
             descripcion=(
                 f"Caja #{caja.id_caja} cerrada. "
-                f"Monto final: ${monto_final:,.0f} / "
-                f"Calculado: ${caja.saldo_calculado:,.0f}"
+                f"Esperado: ${saldo_esperado:,.0f} / "
+                f"Declarado: ${monto_final:,.0f} / "
+                f"Diferencia: ${diferencia:,.0f} ({tipo_diferencia})"
             ),
         )
 

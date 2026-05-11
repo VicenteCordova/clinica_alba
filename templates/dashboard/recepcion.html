@@ -1,4 +1,4 @@
-﻿{% extends 'base.html' %}
+{% extends 'base.html' %}
 {% load core_tags %}
 
 {% block title %}Recepción — {{ CLINICA_NOMBRE }}{% endblock %}
@@ -10,7 +10,16 @@
     <h1 class="page-title">Hola, {{ request.user.nombre_completo|truncatewords:2 }} 👋</h1>
     <p class="page-subtitle">{% now "l, d \d\e F \d\e Y" %}</p>
   </div>
-  <div class="d-flex gap-2">
+  <div class="d-flex gap-2 flex-wrap">
+    {% if caja_activa %}
+    <a href="{% url 'caja:detalle' caja_activa.id_caja %}" class="badge-estado activa" style="font-size:12px;padding:6px 14px;text-decoration:none;" aria-label="Caja abierta">
+      <i class="bi bi-cash-coin me-1" aria-hidden="true"></i> Caja #{{ caja_activa.id_caja }} abierta
+    </a>
+    {% else %}
+    <a href="{% url 'caja:abrir' %}" class="btn btn-outline">
+      <i class="bi bi-cash-coin" aria-hidden="true"></i> Abrir caja
+    </a>
+    {% endif %}
     <a href="{% url 'pacientes:crear' %}" class="btn btn-outline">
       <i class="bi bi-person-plus" aria-hidden="true"></i> Nuevo Paciente
     </a>
@@ -47,6 +56,15 @@
     <div class="kpi-value">{{ citas|filter_estado:"atendida"|length }}</div>
     <div class="kpi-label">Atendidas</div>
   </div>
+  {% if presupuestos_pendientes %}
+  <div class="kpi-card kpi-rosa">
+    <div class="kpi-icon"><i class="bi bi-receipt" style="color:#9d174d;" aria-hidden="true"></i></div>
+    <div class="kpi-value">{{ presupuestos_pendientes }}</div>
+    <div class="kpi-label">
+      <a href="{% url 'presupuestos:lista' %}" style="color:inherit;text-decoration:underline dotted;">Pendientes cobro</a>
+    </div>
+  </div>
+  {% endif %}
 </div>
 
 <div class="row g-4" hx-get="" hx-trigger="estadoCitaCambiado from:body" hx-swap="outerHTML">
@@ -94,9 +112,9 @@
     </div>
   </div>
 
-  <!-- AGENDA DEL DÍA -->
+  <!-- AGENDA DEL DÍA + MAÑANA -->
   <div class="col-lg-8">
-    <div class="card h-100">
+    <div class="card mb-4">
       <div class="card-header">
         <h2 class="card-title">
           <i class="bi bi-calendar-event me-2" aria-hidden="true"></i>Agenda de hoy
@@ -166,6 +184,30 @@
         {% endif %}
       </div>
     </div>
+
+    <!-- Preview de mañana -->
+    {% if citas_manana %}
+    <div class="card">
+      <div class="card-header" style="background:var(--color-fondo);">
+        <h2 class="card-title" style="font-size:14px;color:var(--color-texto-suave);">
+          <i class="bi bi-calendar2-week me-2" aria-hidden="true"></i>Mañana — preview ({{ citas_manana|length }}+)
+        </h2>
+      </div>
+      <div class="card-body p-0">
+        <div class="list-group list-group-flush">
+          {% for cita in citas_manana %}
+          <div class="list-group-item d-flex justify-content-between align-items-center p-3" style="font-size:13px;">
+            <div>
+              <strong>{{ cita.id_paciente.nombre_completo }}</strong>
+              <div style="font-size:11px;color:var(--color-texto-suave);">Dr(a). {{ cita.id_odontologo.nombre_completo }}</div>
+            </div>
+            <span style="font-weight:700;color:var(--color-acento);">{{ cita.fecha_hora_inicio|date:"H:i" }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

@@ -8,7 +8,7 @@
 <div class="page-header">
   <div>
     <h1 class="page-title">Caja #{{ caja.id_caja }}</h1>
-    <p class="page-subtitle">Apertura: {{ caja.fecha_apertura|date:"d/m/Y H:i" }}</p>
+    <p class="page-subtitle">Apertura: {{ caja.fecha_apertura|date:"d/m/Y H:i" }} — {{ caja.id_usuario_apertura.nombre_completo }}</p>
   </div>
   <div class="d-flex gap-2">
     <a href="{% url 'caja:lista' %}" class="btn btn-outline"><i class="bi bi-arrow-left"></i> Volver</a>
@@ -49,6 +49,48 @@
   </div>
 </div>
 
+<!-- Panel de arqueo (solo cajas cerradas) -->
+{% if caja.estado_caja == 'cerrada' and caja.monto_final is not None %}
+<div class="card mb-4" style="border:2px solid {% if caja.arqueo_con_diferencia %}#f97316{% else %}#22c55e{% endif %};">
+  <div class="card-header" style="background:{% if caja.arqueo_con_diferencia %}#fff7ed{% else %}#f0fdf4{% endif %};">
+    <h2 class="card-title" style="color:{% if caja.arqueo_con_diferencia %}#9a3412{% else %}#065f46{% endif %};">
+      <i class="bi bi-{% if caja.arqueo_con_diferencia %}exclamation-triangle{% else %}check-circle{% endif %} me-2"></i>
+      Resumen de Arqueo
+    </h2>
+    <span class="badge-estado {% if caja.arqueo_con_diferencia %}cancelada{% else %}activo{% endif %}" style="font-size:12px;">
+      {% if caja.diferencia_arqueo > 0 %}Sobrante{% elif caja.diferencia_arqueo < 0 %}Faltante{% else %}Arqueo exacto{% endif %}
+    </span>
+  </div>
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-texto-suave);margin-bottom:4px;">Saldo esperado (sistema)</div>
+        <div style="font-size:22px;font-weight:800;color:#065f46;">{{ caja.saldo_calculado|pesos_cl }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-texto-suave);margin-bottom:4px;">Monto declarado (arqueo)</div>
+        <div style="font-size:22px;font-weight:800;color:var(--color-texto);">{{ caja.monto_final|pesos_cl }}</div>
+      </div>
+      <div>
+        <div style="font-size:11px;font-weight:600;text-transform:uppercase;color:var(--color-texto-suave);margin-bottom:4px;">Diferencia</div>
+        <div style="font-size:22px;font-weight:800;color:{% if caja.diferencia_arqueo > 0 %}#0369a1{% elif caja.diferencia_arqueo < 0 %}#991b1b{% else %}#065f46{% endif %};">
+          {% if caja.diferencia_arqueo > 0 %}+{% endif %}{{ caja.diferencia_arqueo|pesos_cl }}
+        </div>
+      </div>
+    </div>
+    {% if caja.observacion_cierre %}
+    <div class="alert alert-info mt-3" style="margin-bottom:0;">
+      <i class="bi bi-chat-text me-2" aria-hidden="true"></i>
+      <strong>Observación:</strong> {{ caja.observacion_cierre }}
+    </div>
+    {% endif %}
+    <div style="font-size:12px;color:var(--color-texto-suave);margin-top:10px;">
+      Cerrada por {{ caja.id_usuario_cierre.nombre_completo }} — {{ caja.fecha_cierre|date:"d/m/Y H:i" }}
+    </div>
+  </div>
+</div>
+{% endif %}
+
 <div class="row g-4">
   <!-- Registrar movimiento -->
   {% if caja.estado_caja == 'abierta' %}
@@ -84,7 +126,7 @@
     <div class="card">
       <div class="card-header"><h2 class="card-title"><i class="bi bi-list-ul me-2"></i>Movimientos ({{ movimientos.count }})</h2></div>
       <div class="table-wrapper" style="border:none;border-radius:0;">
-        <table class="alba-table">
+        <table class="alba-table" aria-label="Movimientos de la caja">
           <thead><tr><th>Hora</th><th>Tipo</th><th>Descripción</th><th>Monto</th><th>Usuario</th></tr></thead>
           <tbody>
             {% for mov in movimientos %}
@@ -113,23 +155,28 @@
 
 <!-- Modal Cerrar Caja -->
 {% if caja.estado_caja == 'abierta' %}
-<div class="modal fade" id="modalCerrar" tabindex="-1">
+<div class="modal fade" id="modalCerrar" tabindex="-1" aria-labelledby="modalCerrarLabel" aria-modal="true" role="dialog">
   <div class="modal-dialog">
     <div class="modal-content" style="border-radius:var(--radius);border:none;">
       <div class="modal-header" style="border-bottom:1px solid var(--color-borde);">
-        <h5 class="modal-title" style="font-weight:700;"><i class="bi bi-lock me-2"></i>Cerrar caja</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <h5 class="modal-title" id="modalCerrarLabel" style="font-weight:700;"><i class="bi bi-lock me-2"></i>Cerrar caja</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <form method="post" action="{% url 'caja:cerrar' caja.id_caja %}">
         {% csrf_token %}
         <div class="modal-body">
           <div class="alert alert-info mb-3">
-            Saldo calculado: <strong>{{ caja.saldo_calculado|pesos_cl }}</strong>
+            Saldo calculado por el sistema: <strong>{{ caja.saldo_calculado|pesos_cl }}</strong>
           </div>
-          <div class="form-group">
-            <label class="form-label">Monto arqueo (efectivo contado)</label>
+          <div class="form-group mb-3">
+            <label class="form-label" for="id_monto_final">Monto arqueo (efectivo contado)</label>
             {{ cerrar_form.monto_final }}
             <div class="form-text">Ingresa el efectivo real que queda en caja al cierre.</div>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="id_observacion_cierre">{{ cerrar_form.observacion_cierre.label }}</label>
+            {{ cerrar_form.observacion_cierre }}
+            <div class="form-text">Opcional. Justifique si existe diferencia con el saldo calculado.</div>
           </div>
         </div>
         <div class="modal-footer" style="border-top:1px solid var(--color-borde);">

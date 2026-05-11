@@ -26,6 +26,12 @@ class CerrarCajaForm(AlbaFormMixin, forms.Form):
         label="Monto arqueo ($)",
         widget=forms.NumberInput(attrs={"placeholder": "0", "min": "0", "class": "form-control"}),
     )
+    observacion_cierre = forms.CharField(
+        required=False,
+        label="Observación de arqueo",
+        widget=forms.Textarea(attrs={"class": "form-control", "rows": "2",
+                                     "placeholder": "Justifique cualquier diferencia detectada en el arqueo..."}),
+    )
 
 
 class MovimientoCajaForm(AlbaFormMixin, forms.Form):

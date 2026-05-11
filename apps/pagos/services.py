@@ -2,6 +2,7 @@
 apps/pagos/services.py
 
 PagoService: lógica de validación anti-sobrepago con select_for_update().
+Integra Libro Mayor y reversas compensatorias al anular pagos.
 """
 from decimal import Decimal
 from django.db import transaction
@@ -20,6 +21,7 @@ class PagoService:
         no supere el monto_final del presupuesto.
 
         Usa select_for_update() para evitar race conditions concurrentes.
+        Registra automáticamente en Libro Mayor si el pago es vigente.
 
         Args:
             datos: dict con id_presupuesto, id_medio_pago, monto,
@@ -33,7 +35,7 @@ class PagoService:
         from apps.pagos.models import Pago
         from apps.presupuestos.models import Presupuesto
         from apps.auditoria.models import Bitacora
-        from apps.caja.models import Caja, TipoMovimientoCaja
+        from apps.caja.models import Caja, TipoMovimientoCaja, EntradaLibroMayor
         from apps.caja.services import CajaService
 
         # Bloquear el presupuesto para lectura consistente
@@ -80,6 +82,7 @@ class PagoService:
         pago.full_clean()
         pago.save()
 
+        caja_abierta = None
         if estado_nuevo == EstadoPagoEnum.VIGENTE:
             caja_abierta = Caja.objects.filter(
                 id_usuario_apertura=usuario,
@@ -96,6 +99,16 @@ class PagoService:
                         descripcion=f"Pago presupuesto {presupuesto.numero_presupuesto}",
                         pago=pago,
                     )
+
+            # Registrar en Libro Mayor
+            EntradaLibroMayor.objects.create(
+                tipo=EntradaLibroMayor.TIPO_INGRESO,
+                monto=nuevo_monto,
+                descripcion=f"Pago #{pago.id_pago} — Presupuesto {presupuesto.numero_presupuesto}",
+                id_caja=caja_abierta,
+                id_pago=pago,
+                id_usuario=usuario,
+            )
 
         PagoService.actualizar_estado_presupuesto(presupuesto)
 
@@ -119,8 +132,14 @@ class PagoService:
     @staticmethod
     @transaction.atomic
     def anular_pago(pago, usuario, motivo: str = "", request=None) -> "Pago":
-        """Anula un pago vigente."""
+        """
+        Anula un pago vigente.
+        Crea automáticamente una reversa compensatoria (egreso) en la caja activa
+        del usuario y registra en el Libro Mayor.
+        """
         from apps.auditoria.models import Bitacora
+        from apps.caja.models import Caja, TipoMovimientoCaja, EntradaLibroMayor
+        from apps.caja.services import CajaService
 
         if pago.estado_pago == "anulado":
             raise ValidationError("El pago ya está anulado.")
@@ -132,6 +151,38 @@ class PagoService:
         pago.motivo_anulacion = motivo
         pago.save(update_fields=["estado_pago", "fecha_anulacion", "id_usuario_anula", "motivo_anulacion"])
         PagoService.actualizar_estado_presupuesto(pago.id_presupuesto)
+
+        # Reversa compensatoria en caja activa del usuario que anula
+        caja_abierta = Caja.objects.filter(
+            id_usuario_apertura=usuario,
+            estado_caja=Caja.ESTADO_ABIERTA,
+        ).first()
+        if caja_abierta:
+            tipo_egreso = TipoMovimientoCaja.objects.filter(nombre="egreso").first()
+            if tipo_egreso:
+                try:
+                    CajaService.registrar_movimiento(
+                        caja=caja_abierta,
+                        tipo_movimiento=tipo_egreso,
+                        monto=pago.monto,
+                        usuario=usuario,
+                        descripcion=(
+                            f"REVERSA — Anulación pago #{pago.id_pago}. "
+                            f"Motivo: {motivo or 'Sin motivo'}"
+                        ),
+                    )
+                except ValidationError:
+                    pass  # No bloqueamos la anulación si hay problema en caja
+
+        # Registrar reversa en Libro Mayor
+        EntradaLibroMayor.objects.create(
+            tipo=EntradaLibroMayor.TIPO_EGRESO,
+            monto=pago.monto,
+            descripcion=f"REVERSA Pago #{pago.id_pago} — Motivo: {motivo or 'Sin motivo'}",
+            id_caja=caja_abierta,
+            id_pago=pago,
+            id_usuario=usuario,
+        )
 
         Bitacora.registrar(
             usuario=usuario,
